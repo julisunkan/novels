@@ -84,7 +84,7 @@ def generate_outline_ajax(project_id):
 @bp.route('/project/<int:project_id>/outline/chapter/add', methods=['POST'])
 def add_chapter(project_id):
     db = get_db()
-    data = request.get_json() or request.form
+    data = request.get_json() if request.is_json else request.form
     max_order = db.execute(
         'SELECT COALESCE(MAX(order_index),0) FROM outline WHERE project_id = ?', (project_id,)
     ).fetchone()[0]
@@ -104,7 +104,7 @@ def add_chapter(project_id):
 @bp.route('/project/<int:project_id>/outline/chapter/<int:chapter_id>/edit', methods=['POST'])
 def edit_chapter(project_id, chapter_id):
     db = get_db()
-    data = request.get_json() or request.form
+    data = request.get_json() if request.is_json else request.form
     db.execute(
         'UPDATE outline SET chapter_title=?, summary=?, target_word_count=? WHERE id=? AND project_id=?',
         (data.get('chapter_title', ''), data.get('summary', ''),
@@ -155,8 +155,10 @@ def duplicate_chapter(project_id, chapter_id):
 @bp.route('/project/<int:project_id>/outline/reorder', methods=['POST'])
 def reorder_chapters(project_id):
     db = get_db()
-    data = request.get_json()
-    order = data.get('order', [])
+    data = request.get_json(silent=True)
+    if not data or 'order' not in data:
+        return jsonify({'error': 'Missing order list'}), 400
+    order = data['order']
     for i, chapter_id in enumerate(order):
         db.execute(
             'UPDATE outline SET chapter_number=?, order_index=? WHERE id=? AND project_id=?',

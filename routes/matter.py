@@ -59,7 +59,7 @@ def generate_matter_ajax(project_id):
     if not api_key:
         return jsonify({'error': 'Groq API key not configured.'}), 400
 
-    data = request.get_json() or request.form
+    data = request.get_json() if request.is_json else request.form
     matter_type = data.get('type', '')
     table = 'front_matter' if matter_type in [t[0] for t in FRONT_MATTER_TYPES] else 'back_matter'
 
@@ -86,7 +86,7 @@ def generate_matter_ajax(project_id):
 @bp.route('/project/<int:project_id>/matter/save', methods=['POST'])
 def save_matter(project_id):
     db = get_db()
-    data = request.get_json() or request.form
+    data = request.get_json() if request.is_json else request.form
     matter_type = data.get('type', '')
     content = data.get('content', '')
     table = 'front_matter' if matter_type in [t[0] for t in FRONT_MATTER_TYPES] else 'back_matter'

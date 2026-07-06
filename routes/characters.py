@@ -20,7 +20,7 @@ def characters_page(project_id):
 @bp.route('/project/<int:project_id>/characters/add', methods=['POST'])
 def add_character(project_id):
     db = get_db()
-    data = request.get_json() or request.form
+    data = request.get_json() if request.is_json else request.form
     char_id = db.execute(
         '''INSERT INTO characters
            (project_id, name, nickname, age, gender, occupation, personality,
@@ -50,7 +50,7 @@ def get_character(project_id, char_id):
 @bp.route('/project/<int:project_id>/characters/<int:char_id>/edit', methods=['POST'])
 def edit_character(project_id, char_id):
     db = get_db()
-    data = request.get_json() or request.form
+    data = request.get_json() if request.is_json else request.form
     db.execute(
         '''UPDATE characters SET name=?, nickname=?, age=?, gender=?, occupation=?,
            personality=?, appearance=?, strengths=?, weaknesses=?, goals=?,

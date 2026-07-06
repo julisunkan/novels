@@ -25,7 +25,7 @@ def editor_page(project_id):
 @bp.route('/project/<int:project_id>/editor/chapter/<int:chapter_id>/save', methods=['POST'])
 def save_chapter_content(project_id, chapter_id):
     db = get_db()
-    data = request.get_json() or request.form
+    data = request.get_json() if request.is_json else request.form
     content = data.get('content', '')
     wc = count_words(content)
     db.execute(
@@ -40,7 +40,7 @@ def save_chapter_content(project_id, chapter_id):
 @bp.route('/project/<int:project_id>/search-replace', methods=['POST'])
 def search_replace(project_id):
     db = get_db()
-    data = request.get_json() or request.form
+    data = request.get_json() if request.is_json else request.form
     find = data.get('find', '')
     replace = data.get('replace', '')
     match_case = data.get('match_case', False)

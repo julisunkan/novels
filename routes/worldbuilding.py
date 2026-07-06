@@ -47,7 +47,7 @@ def worldbuilding_page(project_id):
 @bp.route('/project/<int:project_id>/worldbuilding/add', methods=['POST'])
 def add_entry(project_id):
     db = get_db()
-    data = request.get_json() or request.form
+    data = request.get_json() if request.is_json else request.form
     entry_id = db.execute(
         'INSERT INTO worldbuilding (project_id, category, name, description, details) VALUES (?,?,?,?,?)',
         (project_id, data.get('category', 'locations'), data.get('name', 'New Entry'),
@@ -70,7 +70,7 @@ def get_entry(project_id, entry_id):
 @bp.route('/project/<int:project_id>/worldbuilding/<int:entry_id>/edit', methods=['POST'])
 def edit_entry(project_id, entry_id):
     db = get_db()
-    data = request.get_json() or request.form
+    data = request.get_json() if request.is_json else request.form
     db.execute(
         'UPDATE worldbuilding SET category=?, name=?, description=?, details=? WHERE id=? AND project_id=?',
         (data.get('category', ''), data.get('name', ''), data.get('description', ''),
