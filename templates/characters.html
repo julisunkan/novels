@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% block title %}Characters — {{ project.title }}{% endblock %}
+{% block breadcrumb %}
+<a href="{{ url_for('projects.project_detail', project_id=project.id) }}" class="text-muted text-decoration-none">{{ project.title[:25] }}</a>
+<i class="fas fa-chevron-right mx-2 text-muted small"></i>Characters
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Character Manager</h1>
+    <p class="page-subtitle">{{ characters | length }} characters — automatically injected into all prompts</p>
+  </div>
+  <button class="btn btn-primary" onclick="openCharModal()">
+    <i class="fas fa-plus me-2"></i>Add Character
+  </button>
+</div>
+
+{% if characters %}
+<div class="row g-3">
+  {% for char in characters %}
+  <div class="col-12 col-md-6 col-xl-4">
+    <div class="character-card">
+      <div class="char-avatar">{{ char.name[0] | upper }}</div>
+      <div class="char-header">
+        <h4 class="char-name">{{ char.name }}</h4>
+        {% if char.nickname %}<span class="char-nickname">"{{ char.nickname }}"</span>{% endif %}
+        <div class="char-meta">
+          {% if char.age %}<span><i class="fas fa-birthday-cake me-1"></i>{{ char.age }}</span>{% endif %}
+          {% if char.gender %}<span><i class="fas fa-venus-mars me-1"></i>{{ char.gender }}</span>{% endif %}
+          {% if char.occupation %}<span><i class="fas fa-briefcase me-1"></i>{{ char.occupation }}</span>{% endif %}
+        </div>
+      </div>
+      {% if char.personality %}
+      <div class="char-section">
+        <label>Personality</label>
+        <p>{{ char.personality[:100] }}{% if char.personality|length > 100 %}…{% endif %}</p>
+      </div>
+      {% endif %}
+      {% if char.goals %}
+      <div class="char-section">
+        <label>Goals</label>
+        <p>{{ char.goals[:80] }}{% if char.goals|length > 80 %}…{% endif %}</p>
+      </div>
+      {% endif %}
+      <div class="char-actions">
+        <button class="btn btn-sm btn-outline-primary" onclick="editChar({{ char.id }})">
+          <i class="fas fa-edit me-1"></i>Edit
+        </button>
+        <button class="btn btn-sm btn-outline-danger" onclick="deleteChar({{ char.id }}, '{{ char.name | e }}')">
+          <i class="fas fa-trash"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon"><i class="fas fa-users"></i></div>
+  <h3>No characters yet</h3>
+  <p>Add characters to your story. They'll automatically be included in all AI generation prompts to maintain consistency.</p>
+  <button class="btn btn-primary" onclick="openCharModal()">
+    <i class="fas fa-plus me-2"></i>Add First Character
+  </button>
+</div>
+{% endif %}
+
+<!-- Character Modal -->
+<div class="modal fade" id="charModal" tabindex="-1">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header border-0">
+        <h5 class="modal-title" id="charModalTitle"><i class="fas fa-user-plus me-2"></i>Add Character</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="charId">
+        <div class="row g-3">
+          <div class="col-md-4"><label class="form-label">Name *</label><input id="charName" class="form-control" placeholder="Character name"></div>
+          <div class="col-md-4"><label class="form-label">Nickname</label><input id="charNickname" class="form-control" placeholder="Nickname or alias"></div>
+          <div class="col-md-2"><label class="form-label">Age</label><input id="charAge" class="form-control" placeholder="e.g. 28"></div>
+          <div class="col-md-2"><label class="form-label">Gender</label><input id="charGender" class="form-control" placeholder="e.g. Female"></div>
+          <div class="col-md-4"><label class="form-label">Occupation</label><input id="charOccupation" class="form-control" placeholder="Role or profession"></div>
+          <div class="col-md-8"><label class="form-label">Personality</label><input id="charPersonality" class="form-control" placeholder="Key personality traits"></div>
+          <div class="col-12"><label class="form-label">Physical Appearance</label><textarea id="charAppearance" class="form-control" rows="2" placeholder="Describe how they look"></textarea></div>
+          <div class="col-md-6"><label class="form-label">Strengths</label><textarea id="charStrengths" class="form-control" rows="2" placeholder="Key strengths and abilities"></textarea></div>
+          <div class="col-md-6"><label class="form-label">Weaknesses</label><textarea id="charWeaknesses" class="form-control" rows="2" placeholder="Flaws and vulnerabilities"></textarea></div>
+          <div class="col-12"><label class="form-label">Goals & Motivations</label><textarea id="charGoals" class="form-control" rows="2" placeholder="What drives this character?"></textarea></div>
+          <div class="col-12"><label class="form-label">Relationships</label><textarea id="charRelationships" class="form-control" rows="2" placeholder="Key relationships with other characters"></textarea></div>
+          <div class="col-12"><label class="form-label">Backstory</label><textarea id="charBackstory" class="form-control" rows="3" placeholder="Character's history and background"></textarea></div>
+          <div class="col-12"><label class="form-label">Notes</label><textarea id="charNotes" class="form-control" rows="2" placeholder="Additional notes"></textarea></div>
+        </div>
+      </div>
+      <div class="modal-footer border-0">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="saveChar()"><i class="fas fa-save me-1"></i>Save Character</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const PROJECT_ID = {{ project.id }};
+
+function openCharModal() {
+  document.getElementById('charModalTitle').innerHTML = '<i class="fas fa-user-plus me-2"></i>Add Character';
+  document.getElementById('charId').value = '';
+  ['charName','charNickname','charAge','charGender','charOccupation','charPersonality',
+   'charAppearance','charStrengths','charWeaknesses','charGoals','charRelationships',
+   'charBackstory','charNotes'].forEach(id => document.getElementById(id).value = '');
+  new bootstrap.Modal(document.getElementById('charModal')).show();
+}
+
+async function editChar(id) {
+  const resp = await fetch(`/project/${PROJECT_ID}/characters/${id}`);
+  const c = await resp.json();
+  document.getElementById('charModalTitle').innerHTML = '<i class="fas fa-user-edit me-2"></i>Edit Character';
+  document.getElementById('charId').value = id;
+  document.getElementById('charName').value = c.name || '';
+  document.getElementById('charNickname').value = c.nickname || '';
+  document.getElementById('charAge').value = c.age || '';
+  document.getElementById('charGender').value = c.gender || '';
+  document.getElementById('charOccupation').value = c.occupation || '';
+  document.getElementById('charPersonality').value = c.personality || '';
+  document.getElementById('charAppearance').value = c.appearance || '';
+  document.getElementById('charStrengths').value = c.strengths || '';
+  document.getElementById('charWeaknesses').value = c.weaknesses || '';
+  document.getElementById('charGoals').value = c.goals || '';
+  document.getElementById('charRelationships').value = c.relationships || '';
+  document.getElementById('charBackstory').value = c.backstory || '';
+  document.getElementById('charNotes').value = c.notes || '';
+  new bootstrap.Modal(document.getElementById('charModal')).show();
+}
+
+async function saveChar() {
+  const id = document.getElementById('charId').value;
+  const payload = {
+    name: document.getElementById('charName').value,
+    nickname: document.getElementById('charNickname').value,
+    age: document.getElementById('charAge').value,
+    gender: document.getElementById('charGender').value,
+    occupation: document.getElementById('charOccupation').value,
+    personality: document.getElementById('charPersonality').value,
+    appearance: document.getElementById('charAppearance').value,
+    strengths: document.getElementById('charStrengths').value,
+    weaknesses: document.getElementById('charWeaknesses').value,
+    goals: document.getElementById('charGoals').value,
+    relationships: document.getElementById('charRelationships').value,
+    backstory: document.getElementById('charBackstory').value,
+    notes: document.getElementById('charNotes').value,
+  };
+  if (!payload.name.trim()) { showToast('Character name is required', 'error'); return; }
+  const url = id ? `/project/${PROJECT_ID}/characters/${id}/edit` : `/project/${PROJECT_ID}/characters/add`;
+  const resp = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+  const data = await resp.json();
+  if (data.success) { bootstrap.Modal.getInstance(document.getElementById('charModal')).hide(); location.reload(); }
+  else showToast(data.error || 'Save failed', 'error');
+}
+
+async function deleteChar(id, name) {
+  if (!confirm(`Delete character "${name}"?`)) return;
+  const resp = await fetch(`/project/${PROJECT_ID}/characters/${id}/delete`, {method:'POST'});
+  if ((await resp.json()).success) location.reload();
+}
+</script>
+{% endblock %}

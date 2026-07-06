@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% block title %}Generate — {{ project.title }}{% endblock %}
+{% block breadcrumb %}
+<a href="{{ url_for('projects.project_detail', project_id=project.id) }}" class="text-muted text-decoration-none">{{ project.title[:25] }}</a>
+<i class="fas fa-chevron-right mx-2 text-muted small"></i>Generate
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">AI Chapter Generation</h1>
+    <p class="page-subtitle">{{ project.title }} — {{ project.num_chapters }} chapters, {{ project.words_per_chapter }} words each</p>
+  </div>
+</div>
+
+{% if not groq_configured %}
+<div class="alert alert-danger mb-4">
+  <i class="fas fa-exclamation-triangle me-2"></i>
+  <strong>Groq API key not configured.</strong>
+  Visit <a href="{{ url_for('admin.login') }}">Admin Settings</a> to add your key before generating.
+</div>
+{% endif %}
+
+{% if not outline %}
+<div class="alert alert-warning mb-4">
+  <i class="fas fa-exclamation-triangle me-2"></i>
+  <strong>No outline found.</strong>
+  <a href="{{ url_for('outline.outline_page', project_id=project.id) }}">Generate an outline first</a> before starting chapter generation.
+</div>
+{% endif %}
+
+<!-- Control Panel -->
+<div class="row g-4 mb-4">
+  <div class="col-lg-8">
+    <div class="card generation-control-card">
+      <div class="card-body">
+        <div class="gen-controls">
+          <button id="btnStart" class="btn btn-success btn-lg"
+                  onclick="startGeneration()"
+                  {% if not groq_configured or not outline or project.status in ['generating'] %}disabled{% endif %}>
+            <i class="fas fa-play me-2"></i>
+            {% if project.status == 'completed' %}Regenerate
+            {% elif project.status in ['paused'] %}Resume
+            {% else %}Start Generation{% endif %}
+          </button>
+          <button id="btnPause" class="btn btn-warning btn-lg"
+                  onclick="pauseGeneration()"
+                  {% if project.status not in ['generating'] %}disabled{% endif %}>
+            <i class="fas fa-pause me-2"></i>Pause
+          </button>
+          <button id="btnStop" class="btn btn-danger btn-lg"
+                  onclick="stopGeneration()"
+                  {% if project.status not in ['generating','pausing'] %}disabled{% endif %}>
+            <i class="fas fa-stop me-2"></i>Stop
+          </button>
+        </div>
+        <div id="genStatus" class="gen-status-bar mt-3">
+          <span id="statusText" class="status-label status-{{ project.status }}">
+            {% if project.status == 'generating' %}<i class="fas fa-spinner fa-spin me-2"></i>Generating…
+            {% elif project.status == 'paused' %}<i class="fas fa-pause-circle me-2"></i>Paused
+            {% elif project.status == 'completed' %}<i class="fas fa-check-circle me-2"></i>Completed
+            {% else %}<i class="fas fa-circle me-2"></i>Ready{% endif %}
+          </span>
+          <span id="currentTaskText" class="text-muted ms-3"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card stat-panel">
+      <div class="card-body">
+        <div class="live-stat">
+          <i class="fas fa-book-open text-primary"></i>
+          <div>
+            <div class="live-stat-value" id="statChapters">
+              {{ chapters | selectattr('status', 'equalto', 'generated') | list | length }} / {{ project.num_chapters }}
+            </div>
+            <div class="live-stat-label">Chapters Done</div>
+          </div>
+        </div>
+        <div class="live-stat">
+          <i class="fas fa-align-left text-success"></i>
+          <div>
+            <div class="live-stat-value" id="statWords">
+              {{ '{:,}'.format(chapters | map(attribute='word_count') | sum) }}
+            </div>
+            <div class="live-stat-label">Words Generated</div>
+          </div>
+        </div>
+        <div class="live-stat">
+          <i class="fas fa-coins text-warning"></i>
+          <div>
+            <div class="live-stat-value" id="statTokens">—</div>
+            <div class="live-stat-label">Last Chapter Tokens</div>
+          </div>
+        </div>
+        <div class="live-stat">
+          <i class="fas fa-clock text-info"></i>
+          <div>
+            <div class="live-stat-value" id="statTime">—</div>
+            <div class="live-stat-label">Last Gen Time</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Overall Progress -->
+<div class="card mb-4">
+  <div class="card-body">
+    <div class="d-flex justify-content-between mb-2">
+      <span class="fw-600">Overall Progress</span>
+      <span id="progressPct" class="fw-600 text-primary">0%</span>
+    </div>
+    <div class="progress mb-2" style="height:12px">
+      <div class="progress-bar progress-bar-striped progress-bar-animated" id="mainProgressBar"
+           style="width:0%" role="progressbar"></div>
+    </div>
+    <div class="d-flex justify-content-between">
+      <small class="text-muted"><span id="wordsGenerated">0</span> words generated</small>
+      <small class="text-muted"><span id="wordsTarget">{{ project.num_chapters * project.words_per_chapter }}</span> target</small>
+    </div>
+  </div>
+</div>
+
+<!-- Chapter Progress Grid -->
+<div class="card">
+  <div class="card-header"><i class="fas fa-list-ol me-2"></i>Chapter Status</div>
+  <div class="card-body">
+    <div id="chapterGrid" class="chapter-progress-grid">
+      {% set generated_nums = chapters | map(attribute='chapter_number') | list %}
+      {% for ch in outline %}
+      {% set gen_ch = chapters | selectattr('chapter_number', 'equalto', ch.chapter_number) | first | default(None) %}
+      <div class="chapter-progress-item {% if gen_ch %}status-{{ gen_ch.status }}{% else %}status-pending{% endif %}"
+           id="ch-{{ ch.chapter_number }}" data-chapter="{{ ch.chapter_number }}">
+        <div class="cp-num">{{ ch.chapter_number }}</div>
+        <div class="cp-info">
+          <div class="cp-title">{{ ch.chapter_title[:40] }}{% if ch.chapter_title|length > 40 %}…{% endif %}</div>
+          <div class="cp-status">
+            {% if gen_ch and gen_ch.status == 'generated' %}
+            <span class="text-success"><i class="fas fa-check"></i> {{ '{:,}'.format(gen_ch.word_count) }} words</span>
+            <a href="{{ url_for('chapters.chapter_view', project_id=project.id, chapter_id=gen_ch.id) }}" class="btn btn-xs btn-outline-primary ms-2">Read</a>
+            {% elif gen_ch and gen_ch.status == 'generating' %}
+            <span class="text-primary"><i class="fas fa-spinner fa-spin"></i> Generating…</span>
+            {% else %}
+            <span class="text-muted"><i class="fas fa-clock"></i> Pending</span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/generation.js') }}"></script>
+<script>
+const PROJECT_ID = {{ project.id }};
+const PROJECT_STATUS = '{{ project.status }}';
+const PROJECT_CHAPTERS = {{ project.num_chapters }};
+initGeneration(PROJECT_ID, PROJECT_STATUS, PROJECT_CHAPTERS);
+</script>
+{% endblock %}

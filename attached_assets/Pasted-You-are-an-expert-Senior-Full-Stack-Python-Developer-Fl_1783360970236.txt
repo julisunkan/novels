@@ -1,0 +1,970 @@
+You are an expert Senior Full Stack Python Developer, Flask Developer, UI/UX Designer, SQLite Database Architect, and AI Prompt Engineer.
+
+Build a complete production-quality web application named:
+
+AI Novel & Story Book Creator
+
+The application must use ONLY:
+
+- Python 3
+- Flask
+- SQLite
+- HTML5
+- CSS3
+- Bootstrap 5
+- JavaScript
+- Jinja2 Templates
+- Groq API
+- python-docx
+- reportlab
+- Pillow
+
+DO NOT use:
+
+- Django
+- React
+- Vue
+- Angular
+- MongoDB
+- PostgreSQL
+- MySQL
+
+The application must be cleanly structured using Flask Blueprints and should be easy to maintain and extend.
+
+==================================================
+GENERAL REQUIREMENTS
+==================================================
+
+The application must NOT require user registration or login.
+
+Only an administrator should have access to the admin panel.
+
+Admin URL:
+
+/julisunkan
+
+The admin panel should allow configuration of all application settings.
+
+Store everything inside SQLite.
+
+Use AJAX/Fetch where appropriate to avoid unnecessary page reloads.
+
+Create reusable components.
+
+Use Bootstrap 5 for a modern responsive interface.
+
+Create a beautiful dashboard similar to ChatGPT, Notion or modern SaaS applications.
+
+Include:
+
+• responsive sidebar
+• top navigation
+• cards
+• modals
+• alerts
+• loading animations
+• progress bars
+• tooltips
+• dark/light mode
+
+==================================================
+PROJECT STRUCTURE
+==================================================
+
+Organize the application into folders:
+
+app.py
+
+config.py
+
+database/
+
+models/
+
+routes/
+
+services/
+
+templates/
+
+static/
+
+exports/
+
+uploads/
+
+utils/
+
+==================================================
+DATABASE
+==================================================
+
+Create SQLite tables.
+
+Settings
+
+Projects
+
+Outline
+
+Chapters
+
+Characters
+
+WorldBuilding
+
+FrontMatter
+
+BackMatter
+
+PromptTemplates
+
+GenerationLogs
+
+ProjectHistory
+
+Images
+
+Statistics
+
+==================================================
+HOME PAGE
+==================================================
+
+Create a beautiful dashboard.
+
+Sections include:
+
+Book Information
+
+Book Title
+
+Subtitle
+
+Genre
+
+Audience
+
+Description
+
+Language
+
+Story Type
+
+Writing Style
+
+Point of View
+
+Tense
+
+Tone
+
+==================================================
+BOOK SETTINGS
+==================================================
+
+Users can choose:
+
+Number of Chapters
+
+Words Per Chapter
+
+Creativity Level
+
+Temperature
+
+Top-P
+
+Max Tokens
+
+==================================================
+AI TITLE GENERATOR
+==================================================
+
+Generate
+
+10 title suggestions
+
+10 subtitle suggestions
+
+Users can select one.
+
+==================================================
+OUTLINE GENERATOR
+==================================================
+
+Generate a complete outline.
+
+Each chapter contains
+
+Chapter Number
+
+Chapter Title
+
+Summary
+
+Target Word Count
+
+Users can
+
+Edit
+
+Delete
+
+Add
+
+Reorder
+
+Duplicate
+
+Rename
+
+==================================================
+CHARACTER MANAGER
+==================================================
+
+Allow unlimited characters.
+
+Each character has:
+
+Name
+
+Nickname
+
+Age
+
+Gender
+
+Occupation
+
+Personality
+
+Appearance
+
+Strengths
+
+Weaknesses
+
+Goals
+
+Relationships
+
+Backstory
+
+Notes
+
+Characters should automatically be included in prompts.
+
+==================================================
+WORLD BUILDER
+==================================================
+
+Create a complete world builder.
+
+Include:
+
+Locations
+
+Cities
+
+Kingdoms
+
+Villages
+
+Planets
+
+Magic System
+
+Technology
+
+History
+
+Timeline
+
+Lore
+
+Religion
+
+Politics
+
+Economy
+
+Culture
+
+Languages
+
+Rules
+
+Everything should automatically be injected into prompts.
+
+==================================================
+FRONT MATTER
+==================================================
+
+Allow generation of
+
+Title Page
+
+Copyright
+
+Dedication
+
+Foreword
+
+Preface
+
+Acknowledgements
+
+Introduction
+
+Table of Contents
+
+==================================================
+BACK MATTER
+==================================================
+
+Generate
+
+Conclusion
+
+Epilogue
+
+Afterword
+
+About the Author
+
+Glossary
+
+Appendix
+
+References
+
+==================================================
+BOOK GENERATION
+==================================================
+
+Never generate the entire book at once.
+
+Instead
+
+Generate
+
+Outline
+
+↓
+
+Chapter 1
+
+↓
+
+Save
+
+↓
+
+Summarize Chapter
+
+↓
+
+Update Memory
+
+↓
+
+Chapter 2
+
+↓
+
+Save
+
+↓
+
+Continue until completed.
+
+==================================================
+WRITING MEMORY
+==================================================
+
+After every generated chapter
+
+Automatically generate
+
+Summary
+
+Important Events
+
+Characters Introduced
+
+Character Changes
+
+Locations
+
+Timeline Updates
+
+Unresolved Plot Points
+
+Store in SQLite.
+
+Feed this memory into every future prompt.
+
+This prevents inconsistencies.
+
+==================================================
+AUTOSAVE
+==================================================
+
+Automatically save
+
+Project
+
+Outline
+
+Characters
+
+World Building
+
+Current Chapter
+
+Generated Text
+
+Chapter Summary
+
+Progress
+
+No manual save required.
+
+==================================================
+PAUSE / RESUME
+==================================================
+
+Generation must support
+
+Pause
+
+Resume
+
+Stop
+
+If generation stops on Chapter 8
+
+Resume from Chapter 9.
+
+==================================================
+LIVE PROGRESS
+==================================================
+
+Show
+
+Overall %
+
+Current Chapter
+
+Current Word Count
+
+Target Words
+
+Elapsed Time
+
+Estimated Remaining Time
+
+Tokens Used
+
+API Status
+
+Current Prompt
+
+Current Task
+
+Use AJAX so progress updates live.
+
+==================================================
+CHAPTER MANAGEMENT
+==================================================
+
+Each chapter should support
+
+Edit
+
+Delete
+
+Duplicate
+
+Regenerate
+
+Export
+
+Regenerate only selected paragraphs.
+
+==================================================
+SEARCH & REPLACE
+==================================================
+
+Allow
+
+Find
+
+Replace
+
+Replace All
+
+Match Case
+
+Whole Word
+
+Entire manuscript.
+
+==================================================
+WORD COUNT DASHBOARD
+==================================================
+
+Display
+
+Target Words
+
+Generated Words
+
+Remaining Words
+
+Words Per Chapter
+
+Average Chapter Length
+
+Progress %
+
+==================================================
+PROMPT TEMPLATES
+==================================================
+
+Admin should manage templates.
+
+Fantasy
+
+Sci-Fi
+
+Romance
+
+Mystery
+
+Adventure
+
+Thriller
+
+Children
+
+Comedy
+
+Historical
+
+Business
+
+Educational
+
+Horror
+
+Each template contains
+
+System Prompt
+
+Writing Style
+
+Tone
+
+Genre Instructions
+
+==================================================
+IMAGE SUPPORT
+==================================================
+
+Users choose
+
+Include Images
+
+Images Per Chapter
+
+Image Style
+
+Generate image prompts only.
+
+Styles
+
+Realistic
+
+Fantasy
+
+Watercolor
+
+Oil Painting
+
+Anime
+
+Comic
+
+Sketch
+
+Store image prompts.
+
+==================================================
+COVER PROMPT GENERATOR
+==================================================
+
+Generate detailed cover prompts suitable for AI image generators.
+
+Example output
+
+Book cover
+
+Fantasy
+
+Epic castle
+
+Hero
+
+Ultra detailed
+
+Cinematic lighting
+
+8K
+
+Digital painting
+
+==================================================
+EDITOR
+==================================================
+
+Create a professional manuscript editor.
+
+Support
+
+Rich Text
+
+Undo
+
+Redo
+
+Search
+
+Replace
+
+Spellcheck
+
+Word Count
+
+Character Count
+
+Live Autosave
+
+Dark Mode
+
+Light Mode
+
+==================================================
+FORMATTING
+==================================================
+
+Allow users to customize
+
+Font
+
+Font Size
+
+Line Height
+
+Margins
+
+Paragraph Spacing
+
+Text Alignment
+
+Background Color
+
+Text Color
+
+Heading Color
+
+Chapter Style
+
+==================================================
+EXPORT
+==================================================
+
+Export
+
+DOCX
+
+PDF
+
+TXT
+
+Include options
+
+Table of Contents
+
+Images
+
+Headers
+
+Footers
+
+Page Numbers
+
+Front Matter
+
+Back Matter
+
+==================================================
+PROJECT HISTORY
+==================================================
+
+Display
+
+Cover
+
+Title
+
+Genre
+
+Words
+
+Chapters
+
+Created
+
+Last Edited
+
+Completion
+
+Actions
+
+Continue
+
+Preview
+
+Duplicate
+
+Delete
+
+Export
+
+==================================================
+ADMIN PANEL
+==================================================
+
+Route
+
+/julisunkan
+
+Dashboard
+
+Statistics
+
+Projects
+
+Prompt Templates
+
+Settings
+
+Groq Configuration
+
+Export Settings
+
+Theme Settings
+
+Maintenance
+
+Backups
+
+Logs
+
+==================================================
+ADMIN SETTINGS
+==================================================
+
+Manage
+
+Groq API Key
+
+Model
+
+Temperature
+
+Top-P
+
+Max Tokens
+
+Default Prompt
+
+Default Font
+
+Default Theme
+
+Website Name
+
+Logo
+
+Footer
+
+Maintenance Mode
+
+==================================================
+ANALYTICS
+==================================================
+
+Show
+
+Books Generated
+
+Projects
+
+Words Generated
+
+Average Chapter Length
+
+Average Generation Time
+
+Total API Requests
+
+Estimated Tokens
+
+==================================================
+BACKUPS
+==================================================
+
+Allow
+
+Backup SQLite
+
+Restore SQLite
+
+Download Backup
+
+==================================================
+THEMES
+==================================================
+
+Include
+
+Light
+
+Dark
+
+Auto
+
+==================================================
+RESPONSIVE DESIGN
+==================================================
+
+Support
+
+Desktop
+
+Laptop
+
+Tablet
+
+Mobile
+
+Use Bootstrap responsive layouts.
+
+==================================================
+ERROR HANDLING
+==================================================
+
+Handle
+
+Groq API errors
+
+Timeouts
+
+Empty responses
+
+SQLite errors
+
+Export failures
+
+Display friendly messages.
+
+==================================================
+SECURITY
+==================================================
+
+Protect
+
+Admin panel
+
+Validate all inputs
+
+Sanitize prompts
+
+Prevent SQL Injection
+
+Use CSRF protection where appropriate
+
+Secure file downloads
+
+==================================================
+CODE QUALITY
+==================================================
+
+The generated code must
+
+Be modular
+
+Use Flask Blueprints
+
+Contain comments
+
+Follow PEP8
+
+Separate HTML CSS JS
+
+Use reusable helper functions
+
+Avoid duplicated code
+
+==================================================
+FINAL REQUIREMENT
+==================================================
+
+Generate the COMPLETE working application.
+
+Do not generate placeholders.
+
+Do not leave TODO comments.
+
+Generate all Python files.
+
+Generate all HTML templates.
+
+Generate all CSS.
+
+Generate all JavaScript.
+
+Generate all SQLite models.
+
+Generate database initialization.
+
+Generate Groq integration.
+
+Generate export functions.
+
+Generate admin panel.
+
+Generate manuscript editor.
+
+Generate prompt management.
+
+Generate project history.
+
+Generate chapter generation pipeline.
+
+Generate autosave.
+
+Generate pause/resume.
+
+Generate progress tracking.
+
+Generate consistency memory.
+
+Generate image prompt generator.
+
+Generate responsive UI.
+
+Ensure the application runs successfully in Replit with a single command after installing dependencies.

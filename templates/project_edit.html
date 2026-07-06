@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}Edit {{ project.title }} — {{ app_name }}{% endblock %}
+{% block breadcrumb %}
+<a href="{{ url_for('projects.project_detail', project_id=project.id) }}" class="text-muted text-decoration-none">{{ project.title[:25] }}</a>
+<i class="fas fa-chevron-right mx-2 text-muted small"></i>Edit
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Edit Project</h1>
+</div>
+
+<form method="POST" action="{{ url_for('projects.edit_project', project_id=project.id) }}">
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="card form-card mb-4">
+        <div class="card-header"><i class="fas fa-book me-2"></i>Book Information</div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label">Book Title</label>
+            <input type="text" name="title" class="form-control" value="{{ project.title }}" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Subtitle</label>
+            <input type="text" name="subtitle" class="form-control" value="{{ project.subtitle }}">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Description</label>
+            <textarea name="description" class="form-control" rows="4">{{ project.description }}</textarea>
+          </div>
+          <div class="row g-3">
+            {% set selects = [
+              ('genre', 'Genre', ['Fantasy','Sci-Fi','Romance','Mystery','Adventure','Thriller','Children','Comedy','Historical','Business','Educational','Horror','Other']),
+              ('story_type', 'Story Type', ['Novel','Novella','Short Story Collection','Non-Fiction','Memoir','Biography']),
+              ('audience', 'Audience', ['Children (5-8)','Middle Grade (8-12)','Young Adult (12-18)','Adult','All Ages']),
+              ('writing_style', 'Writing Style', ['Descriptive','Minimalist','Lyrical','Action-Oriented','Dialogue-Heavy','Stream of Consciousness']),
+              ('point_of_view', 'Point of View', ['First Person','Second Person','Third Person Limited','Third Person Omniscient']),
+              ('tense', 'Tense', ['Past','Present','Future']),
+              ('tone', 'Tone', ['Adventurous','Dark','Humorous','Romantic','Suspenseful','Inspirational','Melancholic','Whimsical']),
+              ('language', 'Language', ['English','Spanish','French','German','Italian','Portuguese','Other']),
+            ] %}
+            {% for field, label, opts in selects %}
+            <div class="col-md-4">
+              <label class="form-label">{{ label }}</label>
+              <select name="{{ field }}" class="form-select">
+                {% for o in opts %}
+                <option value="{{ o }}" {% if project[field] == o %}selected{% endif %}>{{ o }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="card form-card mb-4">
+        <div class="card-header"><i class="fas fa-sliders-h me-2"></i>Book Settings</div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label">Number of Chapters</label>
+            <input type="number" name="num_chapters" class="form-control" value="{{ project.num_chapters }}" min="1" max="100">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Words Per Chapter</label>
+            <input type="number" name="words_per_chapter" class="form-control" value="{{ project.words_per_chapter }}" min="500" max="10000" step="100">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Temperature</label>
+            <input type="range" name="temperature" class="form-range" min="0.1" max="1.5" step="0.1" value="{{ project.temperature }}"
+                   oninput="this.nextElementSibling.textContent=this.value">
+            <small class="text-muted">{{ project.temperature }}</small>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Top-P</label>
+            <input type="range" name="top_p" class="form-range" min="0.1" max="1.0" step="0.05" value="{{ project.top_p }}"
+                   oninput="this.nextElementSibling.textContent=this.value">
+            <small class="text-muted">{{ project.top_p }}</small>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Max Tokens</label>
+            <select name="max_tokens" class="form-select">
+              {% for v in [2048,4096,8192] %}
+              <option value="{{ v }}" {% if project.max_tokens == v %}selected{% endif %}>{{ '{:,}'.format(v) }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Creativity Level</label>
+            <select name="creativity_level" class="form-select">
+              {% for v,l in [('conservative','Conservative'),('balanced','Balanced'),('creative','Creative'),('wild','Wild')] %}
+              <option value="{{ v }}" {% if project.creativity_level == v %}selected{% endif %}>{{ l }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" name="include_images" id="includeImages"
+                     {% if project.include_images %}checked{% endif %}>
+              <label class="form-check-label" for="includeImages">Generate image prompts</label>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary flex-grow-1">
+          <i class="fas fa-save me-2"></i>Save Changes
+        </button>
+        <a href="{{ url_for('projects.project_detail', project_id=project.id) }}" class="btn btn-outline-secondary">
+          Cancel
+        </a>
+      </div>
+    </div>
+  </div>
+</form>
+{% endblock %}

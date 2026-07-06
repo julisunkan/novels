@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% block title %}{{ project.title }} — {{ app_name }}{% endblock %}
+{% block breadcrumb %}
+<a href="{{ url_for('main.history') }}" class="text-muted text-decoration-none">Projects</a>
+<i class="fas fa-chevron-right mx-2 text-muted small"></i>
+{{ project.title[:30] }}{% if project.title|length > 30 %}…{% endif %}
+{% endblock %}
+
+{% block topnav_actions %}
+<a href="{{ url_for('projects.edit_project', project_id=project.id) }}" class="btn btn-outline-secondary btn-sm me-2">
+  <i class="fas fa-edit me-1"></i>Edit
+</a>
+{% endblock %}
+
+{% block content %}
+<!-- Project Header -->
+<div class="project-hero mb-4">
+  <div class="project-hero-info">
+    <div class="genre-badge genre-{{ project.genre | lower | replace(' ', '-') | replace('/', '-') }} mb-2">{{ project.genre }}</div>
+    <h1 class="project-hero-title">{{ project.title }}</h1>
+    {% if project.subtitle %}<p class="project-hero-subtitle">{{ project.subtitle }}</p>{% endif %}
+    <p class="project-hero-desc">{{ project.description }}</p>
+    <div class="project-meta-tags">
+      <span class="meta-tag"><i class="fas fa-list-ol me-1"></i>{{ project.num_chapters }} Chapters</span>
+      <span class="meta-tag"><i class="fas fa-align-left me-1"></i>{{ project.words_per_chapter }} words/ch</span>
+      <span class="meta-tag"><i class="fas fa-eye me-1"></i>{{ project.point_of_view }}</span>
+      <span class="meta-tag"><i class="fas fa-clock me-1"></i>{{ project.tense }}</span>
+      <span class="meta-tag"><i class="fas fa-theater-masks me-1"></i>{{ project.tone }}</span>
+    </div>
+  </div>
+  <div class="project-hero-actions">
+    <div class="status-pill status-{{ project.status }} mb-2">
+      {% if project.status == 'completed' %}<i class="fas fa-check-circle"></i>
+      {% elif project.status == 'generating' %}<i class="fas fa-spinner fa-spin"></i>
+      {% elif project.status == 'paused' %}<i class="fas fa-pause-circle"></i>
+      {% else %}<i class="fas fa-circle-dot"></i>{% endif %}
+      {{ project.status | title }}
+    </div>
+    <div class="progress-display">
+      <div class="progress-circle">
+        <svg viewBox="0 0 36 36">
+          <circle cx="18" cy="18" r="15.9" fill="none" stroke="var(--border-color)" stroke-width="2"/>
+          <circle cx="18" cy="18" r="15.9" fill="none" stroke="var(--primary)" stroke-width="2.5"
+                  stroke-dasharray="{{ progress }}, 100" stroke-linecap="round" transform="rotate(-90 18 18)"/>
+        </svg>
+        <span>{{ progress }}%</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Stats Row -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="mini-stat">
+      <div class="mini-stat-value text-primary">{{ generated_count }}</div>
+      <div class="mini-stat-label">Generated</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="mini-stat">
+      <div class="mini-stat-value">{{ project.num_chapters }}</div>
+      <div class="mini-stat-label">Total Chapters</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="mini-stat">
+      <div class="mini-stat-value text-success">{{ '{:,}'.format(total_words) }}</div>
+      <div class="mini-stat-label">Words Generated</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="mini-stat">
+      <div class="mini-stat-value text-warning">{{ '{:,}'.format(target_words) }}</div>
+      <div class="mini-stat-label">Target Words</div>
+    </div>
+  </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="quick-actions mb-4">
+  <a href="{{ url_for('outline.outline_page', project_id=project.id) }}" class="quick-action-btn">
+    <i class="fas fa-list-ol"></i>
+    <span>Outline</span>
+    <small>{{ outline_count }} chapters</small>
+  </a>
+  <a href="{{ url_for('characters.characters_page', project_id=project.id) }}" class="quick-action-btn">
+    <i class="fas fa-users"></i>
+    <span>Characters</span>
+    <small>{{ char_count }} created</small>
+  </a>
+  <a href="{{ url_for('worldbuilding.worldbuilding_page', project_id=project.id) }}" class="quick-action-btn">
+    <i class="fas fa-globe"></i>
+    <span>World Builder</span>
+    <small>{{ world_count }} entries</small>
+  </a>
+  <a href="{{ url_for('matter.matter_page', project_id=project.id) }}" class="quick-action-btn">
+    <i class="fas fa-file-alt"></i>
+    <span>Matter</span>
+    <small>Front/Back</small>
+  </a>
+  <a href="{{ url_for('chapters.generation_page', project_id=project.id) }}" class="quick-action-btn highlight">
+    <i class="fas fa-robot"></i>
+    <span>Generate</span>
+    <small>AI writing</small>
+  </a>
+  <a href="{{ url_for('editor.editor_page', project_id=project.id) }}" class="quick-action-btn">
+    <i class="fas fa-pen-fancy"></i>
+    <span>Editor</span>
+    <small>Manuscript</small>
+  </a>
+  <a href="{{ url_for('exports.export_page', project_id=project.id) }}" class="quick-action-btn">
+    <i class="fas fa-file-export"></i>
+    <span>Export</span>
+    <small>PDF, DOCX, TXT</small>
+  </a>
+</div>
+
+<!-- Chapters List -->
+{% if chapters %}
+<div class="section-header mb-3">
+  <h2 class="section-title">Chapters</h2>
+  <a href="{{ url_for('chapters.generation_page', project_id=project.id) }}" class="btn btn-primary btn-sm">
+    <i class="fas fa-robot me-1"></i>Generate More
+  </a>
+</div>
+<div class="chapters-grid">
+  {% for ch in chapters %}
+  <div class="chapter-item chapter-status-{{ ch.status }}">
+    <div class="chapter-num">Ch. {{ ch.chapter_number }}</div>
+    <div class="chapter-info">
+      <div class="chapter-title">{{ ch.chapter_title or 'Untitled Chapter' }}</div>
+      <div class="chapter-meta">
+        <span class="chapter-words">{{ '{:,}'.format(ch.word_count) }} words</span>
+        <span class="chapter-badge badge-{{ ch.status }}">{{ ch.status }}</span>
+      </div>
+    </div>
+    {% if ch.status == 'generated' %}
+    <a href="{{ url_for('chapters.chapter_view', project_id=project.id, chapter_id=ch.id) }}" class="btn btn-sm btn-outline-primary ms-auto">
+      Read
+    </a>
+    {% elif ch.status == 'generating' %}
+    <span class="spinner-border spinner-border-sm text-primary ms-auto"></span>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-info">
+  <i class="fas fa-info-circle me-2"></i>
+  No chapters generated yet.
+  {% if outline_count == 0 %}
+  <a href="{{ url_for('outline.outline_page', project_id=project.id) }}">Generate an outline first</a>, then
+  {% endif %}
+  <a href="{{ url_for('chapters.generation_page', project_id=project.id) }}">start AI generation</a>.
+</div>
+{% endif %}
+{% endblock %}

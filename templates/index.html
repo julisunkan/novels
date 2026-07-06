@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}Home — {{ app_name }}{% endblock %}
+{% block breadcrumb %}<i class="fas fa-home me-2"></i>Home{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Welcome to <span class="gradient-text">{{ app_name }}</span></h1>
+    <p class="page-subtitle">Create AI-powered novels and story books with the power of Groq LLM.</p>
+  </div>
+  <a href="{{ url_for('projects.new_project') }}" class="btn btn-primary btn-lg">
+    <i class="fas fa-plus me-2"></i>Create New Book
+  </a>
+</div>
+
+<!-- Stats Row -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background: linear-gradient(135deg, #7c3aed, #a855f7)">
+        <i class="fas fa-book"></i>
+      </div>
+      <div class="stat-value">{{ stats.total_projects }}</div>
+      <div class="stat-label">Total Projects</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background: linear-gradient(135deg, #2563eb, #3b82f6)">
+        <i class="fas fa-align-left"></i>
+      </div>
+      <div class="stat-value">{{ '{:,}'.format(stats.total_words) }}</div>
+      <div class="stat-label">Words Generated</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background: linear-gradient(135deg, #059669, #10b981)">
+        <i class="fas fa-check-circle"></i>
+      </div>
+      <div class="stat-value">{{ stats.completed }}</div>
+      <div class="stat-label">Completed</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background: linear-gradient(135deg, #d97706, #f59e0b)">
+        <i class="fas fa-spinner"></i>
+      </div>
+      <div class="stat-value">{{ stats.in_progress }}</div>
+      <div class="stat-label">In Progress</div>
+    </div>
+  </div>
+</div>
+
+<!-- Recent Projects -->
+{% if projects %}
+<div class="section-header mb-3">
+  <h2 class="section-title">Recent Projects</h2>
+  <a href="{{ url_for('main.history') }}" class="btn btn-outline-secondary btn-sm">View All</a>
+</div>
+<div class="row g-3 mb-5">
+  {% for p in projects %}
+  <div class="col-12 col-md-6 col-xl-4">
+    <div class="project-card">
+      <div class="project-card-header">
+        <div class="genre-badge genre-{{ p.genre | lower | replace(' ', '-') | replace('/', '-') }}">{{ p.genre }}</div>
+        <div class="project-status status-{{ p.status }}">
+          {% if p.status == 'completed' %}<i class="fas fa-check-circle"></i>
+          {% elif p.status in ['generating', 'in_progress'] %}<i class="fas fa-spinner fa-spin"></i>
+          {% elif p.status == 'paused' %}<i class="fas fa-pause-circle"></i>
+          {% else %}<i class="fas fa-circle"></i>{% endif %}
+          {{ p.status | title }}
+        </div>
+      </div>
+      <h3 class="project-card-title">{{ p.title }}</h3>
+      {% if p.subtitle %}<p class="project-card-subtitle">{{ p.subtitle }}</p>{% endif %}
+      <p class="project-card-desc">{{ p.description[:100] }}{% if p.description|length > 100 %}…{% endif %}</p>
+      <div class="project-card-meta">
+        <span><i class="fas fa-list-ol me-1"></i>{{ p.num_chapters }} chapters</span>
+        <span><i class="fas fa-align-left me-1"></i>{{ '{:,}'.format(p.total_words) }} words</span>
+      </div>
+      {% set progress = (p.current_chapter / p.num_chapters * 100) | int if p.num_chapters else 0 %}
+      <div class="progress mt-2" style="height:4px">
+        <div class="progress-bar bg-primary" style="width:{{ progress }}%"></div>
+      </div>
+      <div class="project-card-actions">
+        <a href="{{ url_for('projects.project_detail', project_id=p.id) }}" class="btn btn-primary btn-sm">
+          <i class="fas fa-arrow-right me-1"></i>Open
+        </a>
+        <a href="{{ url_for('chapters.generation_page', project_id=p.id) }}" class="btn btn-outline-secondary btn-sm">
+          <i class="fas fa-robot me-1"></i>Generate
+        </a>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<!-- Empty state -->
+<div class="empty-state">
+  <div class="empty-icon"><i class="fas fa-book-open"></i></div>
+  <h3>No projects yet</h3>
+  <p>Start your first AI-powered book. Set up your story details, generate an outline, and let AI write the chapters.</p>
+  <a href="{{ url_for('projects.new_project') }}" class="btn btn-primary btn-lg">
+    <i class="fas fa-plus me-2"></i>Create Your First Book
+  </a>
+</div>
+{% endif %}
+
+<!-- Feature highlights -->
+<div class="row g-3 mt-2">
+  {% set features = [
+    ('fas fa-list-ol', 'Smart Outlines', 'AI generates a complete chapter-by-chapter outline tailored to your story.', '#7c3aed'),
+    ('fas fa-users', 'Character Manager', 'Build detailed character profiles automatically injected into every chapter.', '#2563eb'),
+    ('fas fa-globe', 'World Builder', 'Create rich worlds with locations, magic systems, lore, and more.', '#059669'),
+    ('fas fa-brain', 'Writing Memory', 'AI remembers every chapter to maintain perfect story consistency.', '#d97706'),
+    ('fas fa-file-export', 'Export Ready', 'Export your finished book as PDF, DOCX, or plain text instantly.', '#dc2626'),
+    ('fas fa-pause-circle', 'Pause & Resume', 'Generation can be paused and resumed at any time, chapter by chapter.', '#0891b2'),
+  ] %}
+  {% for icon, title, desc, color in features %}
+  <div class="col-12 col-md-6 col-lg-4">
+    <div class="feature-card">
+      <div class="feature-icon" style="color:{{ color }}"><i class="{{ icon }}"></i></div>
+      <h4>{{ title }}</h4>
+      <p>{{ desc }}</p>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Search — {{ app_name }}{% endblock %}
+{% block breadcrumb %}<i class="fas fa-search me-2"></i>Search{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Search Manuscripts</h1>
+</div>
+
+<form method="GET" class="mb-4">
+  <div class="input-group input-group-lg">
+    <span class="input-group-text"><i class="fas fa-search"></i></span>
+    <input type="text" name="q" class="form-control" placeholder="Search across all chapters..." value="{{ query }}">
+    <button type="submit" class="btn btn-primary">Search</button>
+  </div>
+</form>
+
+{% if query %}
+<div class="text-muted mb-3">{{ results | length }} results for "{{ query }}"</div>
+{% if results %}
+<div class="card data-card">
+  <div class="card-body p-0">
+    {% for r in results %}
+    <div class="search-result-item">
+      <div class="search-result-project">{{ r.project_title }}</div>
+      <a href="{{ url_for('chapters.chapter_view', project_id=r.project_id, chapter_id=r.id) }}" class="search-result-title">
+        Chapter {{ r.chapter_number }}: {{ r.chapter_title }}
+      </a>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon"><i class="fas fa-search"></i></div>
+  <h3>No results found</h3>
+  <p>No chapters contain "{{ query }}".</p>
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}

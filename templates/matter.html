@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}Front/Back Matter — {{ project.title }}{% endblock %}
+{% block breadcrumb %}
+<a href="{{ url_for('projects.project_detail', project_id=project.id) }}" class="text-muted text-decoration-none">{{ project.title[:25] }}</a>
+<i class="fas fa-chevron-right mx-2 text-muted small"></i>Front/Back Matter
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Front &amp; Back Matter</h1>
+  <p class="page-subtitle">Generate and edit supporting content for your book</p>
+</div>
+
+{% if not groq_configured %}
+<div class="alert alert-warning mb-4">
+  <i class="fas fa-exclamation-triangle me-2"></i>
+  Configure your Groq API key in <a href="{{ url_for('admin.login') }}">Admin Settings</a> to generate with AI.
+</div>
+{% endif %}
+
+<div class="row g-4">
+  <!-- Front Matter -->
+  <div class="col-lg-6">
+    <div class="card form-card">
+      <div class="card-header"><i class="fas fa-book-open me-2"></i>Front Matter</div>
+      <div class="card-body p-0">
+        <div class="accordion accordion-flush" id="frontAccordion">
+          {% for type_key, type_label in front_types %}
+          <div class="accordion-item matter-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#front_{{ type_key }}">
+                {% if front.get(type_key) %}
+                <i class="fas fa-check-circle text-success me-2"></i>
+                {% else %}
+                <i class="fas fa-circle text-muted me-2"></i>
+                {% endif %}
+                {{ type_label }}
+              </button>
+            </h2>
+            <div id="front_{{ type_key }}" class="accordion-collapse collapse" data-bs-parent="#frontAccordion">
+              <div class="accordion-body">
+                <div class="d-flex gap-2 mb-3">
+                  <button class="btn btn-sm btn-primary" onclick="generateMatter('{{ type_key }}', 'front')" {% if not groq_configured %}disabled{% endif %}>
+                    <i class="fas fa-magic me-1"></i>Generate with AI
+                  </button>
+                  <button class="btn btn-sm btn-outline-secondary" onclick="saveMatter('{{ type_key }}')">
+                    <i class="fas fa-save me-1"></i>Save
+                  </button>
+                </div>
+                <div id="loading_{{ type_key }}" class="text-center py-3" style="display:none">
+                  <div class="spinner-border spinner-border-sm text-primary"></div> Generating…
+                </div>
+                <textarea class="form-control matter-textarea" id="content_{{ type_key }}" rows="8"
+                          placeholder="Write or generate {{ type_label }}…">{{ front.get(type_key, '') }}</textarea>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Back Matter -->
+  <div class="col-lg-6">
+    <div class="card form-card">
+      <div class="card-header"><i class="fas fa-book me-2"></i>Back Matter</div>
+      <div class="card-body p-0">
+        <div class="accordion accordion-flush" id="backAccordion">
+          {% for type_key, type_label in back_types %}
+          <div class="accordion-item matter-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#back_{{ type_key }}">
+                {% if back.get(type_key) %}
+                <i class="fas fa-check-circle text-success me-2"></i>
+                {% else %}
+                <i class="fas fa-circle text-muted me-2"></i>
+                {% endif %}
+                {{ type_label }}
+              </button>
+            </h2>
+            <div id="back_{{ type_key }}" class="accordion-collapse collapse" data-bs-parent="#backAccordion">
+              <div class="accordion-body">
+                <div class="d-flex gap-2 mb-3">
+                  <button class="btn btn-sm btn-primary" onclick="generateMatter('{{ type_key }}', 'back')" {% if not groq_configured %}disabled{% endif %}>
+                    <i class="fas fa-magic me-1"></i>Generate with AI
+                  </button>
+                  <button class="btn btn-sm btn-outline-secondary" onclick="saveMatter('{{ type_key }}')">
+                    <i class="fas fa-save me-1"></i>Save
+                  </button>
+                </div>
+                <div id="loading_{{ type_key }}" class="text-center py-3" style="display:none">
+                  <div class="spinner-border spinner-border-sm text-primary"></div> Generating…
+                </div>
+                <textarea class="form-control matter-textarea" id="content_{{ type_key }}" rows="8"
+                          placeholder="Write or generate {{ type_label }}…">{{ back.get(type_key, '') }}</textarea>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const PROJECT_ID = {{ project.id }};
+
+async function generateMatter(type, section) {
+  document.getElementById('loading_' + type).style.display = 'block';
+  try {
+    const resp = await fetch(`/project/${PROJECT_ID}/matter/generate`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({type})
+    });
+    const data = await resp.json();
+    if (data.error) { showToast(data.error, 'error'); return; }
+    document.getElementById('content_' + type).value = data.content;
+    showToast(`${type.replace('_',' ')} generated!`, 'success');
+  } catch(e) {
+    showToast('Generation failed: ' + e.message, 'error');
+  } finally {
+    document.getElementById('loading_' + type).style.display = 'none';
+  }
+}
+
+async function saveMatter(type) {
+  const content = document.getElementById('content_' + type).value;
+  const resp = await fetch(`/project/${PROJECT_ID}/matter/save`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({type, content})
+  });
+  const data = await resp.json();
+  if (data.success) showToast('Saved!', 'success');
+  else showToast('Save failed', 'error');
+}
+</script>
+{% endblock %}

@@ -1,0 +1,128 @@
+Develop a Python Flask web app called "AI Business Proposal Generator" with the following requirements:
+
+1. General Requirements:
+- Python 3.11+
+- Flask web framework
+- SQLite database (single-user, local storage)
+- No login or registration system
+- No admin page
+- Fully offline-capable except for Gemini AI calls
+- Store all data locally
+- Clean, professional UI (HTML + CSS + Bootstrap optional)
+- Include Gemini AI integration (user provides API key in Settings)
+
+2. Core Features:
+
+2.1 Settings Page:
+- Single page /settings
+- User can add/update/remove Gemini API key
+- API key stored encrypted (use cryptography / Fernet)
+- Show a message when saved successfully
+
+2.2 Proposal Templates:
+- Include 30 industry-ready templates (education, healthcare, software, etc.)
+- Editable and stored locally (SQLite or text files)
+- Allow users to create new templates or edit existing ones
+
+2.3 Proposal Generator:
+- User selects Industry, Template, Tone (formal, persuasive, corporate, simple), Length (short, standard, detailed)
+- AI generates proposal using Gemini AI or local fallback
+- Sectioned output: Executive Summary, Background/Problem, Objectives, Solution, Timeline, Budget, Risks/Assumptions, Conclusion/CTA
+
+2.4 Proposal Editing:
+- Edit any section manually
+- Lock sections from AI regeneration
+- Section-by-section regeneration
+
+2.5 Proposal History:
+- Auto-save every generated proposal
+- List view with Client name, Industry, Date
+- Actions: View, Edit, Regenerate, Duplicate, Delete
+- Store version history for each proposal
+
+2.6 Branding:
+- User can create multiple brand profiles: Company name, Logo, Brand colors
+- Apply branding to exported proposals
+
+2.7 AI Features:
+- AI proposal review & improvement
+- Generate risks, assumptions, dependencies
+- Generate competitive advantage section
+- Smart call-to-action generator
+- Pricing table generator
+
+2.8 Export Options:
+- PDF and DOCX export
+- Include cover page, table of contents, page numbers, header/footer, logo & brand colors, signature section
+
+2.9 Productivity Features:
+- Auto-save drafts
+- Proposal comparison (side-by-side)
+- Version history / restore previous versions
+- Local LLM fallback if Gemini key missing
+- Client information memory (auto-fill for repeat clients)
+- Proposal completeness checklist (budget, timeline, risks, CTA)
+
+3. Database Design (SQLite):
+- Tables: app_settings (Gemini API key), proposals (proposal metadata + content), proposal_sections (section content), proposal_versions (history), branding_profiles (logos/colors), clients (client info), custom_templates (user-created templates)
+
+4. File Structure:
+/ai_proposal_app
+├── app.py                 # Main Flask app
+├── templates/             # HTML templates
+│   ├── index.html
+│   ├── settings.html
+│   ├── proposal.html
+│   ├── history.html
+├── static/                # CSS, JS, images
+├── utils/
+│   ├── ai_engine_gemini.py
+│   ├── crypto.py
+│   ├── settings_loader.py
+│   ├── template_loader.py
+│   └── prompt_builder.py
+├── database.db
+├── requirements.txt
+└── templates_library/     # Prebuilt 30 templates
+
+5. AI Integration:
+- Gemini AI key is dynamic per user
+- Local fallback (optional) if no key provided
+- Use structured prompts with template outline, client details, tone & style, section-by-section instructions, output in professional format
+
+6. Frontend Features:
+- Clean layout, responsive for mobile & desktop
+- Proposal editor with section expansion/collapse
+- Buttons: Generate proposal, Regenerate section, AI improve, Export PDF/DOCX
+- Proposal history list with filters
+- Branding selector
+
+7. Dependencies:
+- Flask
+- sqlite3 (builtin)
+- cryptography
+- google-generativeai
+- python-docx
+- reportlab (for PDF)
+- optional: Bootstrap for frontend
+
+8. Instructions for Replit:
+- Install dependencies with pip
+- Create .env file for secret keys: APP_SECRET_KEY=<fernet_secret_key>, PLATFORM_GEMINI_KEY=<optional_default_key>
+- Run app using: flask run
+- App should be fully usable from browser on Replit
+
+9. Extras / Nice-to-Have:
+- Auto-save AI token usage per session (optional)
+- AI prompt templates per section
+- Drag & drop proposal sections (UI)
+- Preview generated proposal before export
+
+Expected Outcome:
+- Single-user, fully-featured AI Business Proposal Generator
+- 30 prebuilt templates
+- Gemini AI / Local AI support
+- Sectioned editable proposals
+- History, versioning, and comparison
+- Branding, PDF/DOCX export
+- No login, no admin, fully offline where possible

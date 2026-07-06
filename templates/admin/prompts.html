@@ -1,0 +1,143 @@
+{% extends "admin/base.html" %}
+{% block title %}Prompt Templates{% endblock %}
+{% block breadcrumb %}Prompt Templates{% endblock %}
+
+{% block admin_content %}
+<div class="page-header">
+  <h1 class="page-title">Prompt Templates</h1>
+  <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addPromptModal">
+    <i class="fas fa-plus me-2"></i>Add Template
+  </button>
+</div>
+
+<div class="card data-card">
+  <div class="card-body p-0">
+    <div class="accordion accordion-flush" id="promptsAccordion">
+      {% for t in templates %}
+      <div class="accordion-item">
+        <h2 class="accordion-header">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#prompt_{{ t.id }}">
+            <span class="genre-badge genre-{{ t.genre | lower | replace(' ', '-') | replace('/', '-') }} me-3">{{ t.genre }}</span>
+            {{ t.name }}
+            {% if t.is_default %}<span class="badge bg-success ms-2">Default</span>{% endif %}
+          </button>
+        </h2>
+        <div id="prompt_{{ t.id }}" class="accordion-collapse collapse">
+          <div class="accordion-body">
+            <form onsubmit="savePrompt(event, {{ t.id }})">
+              <div class="row g-3 mb-3">
+                <div class="col-md-4">
+                  <label class="form-label">Genre</label>
+                  <select name="genre" class="form-select form-select-sm">
+                    {% for g in genres %}
+                    <option value="{{ g }}" {% if t.genre == g %}selected{% endif %}>{{ g }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="col-md-8">
+                  <label class="form-label">Template Name</label>
+                  <input type="text" name="name" class="form-control form-control-sm" value="{{ t.name }}">
+                </div>
+                <div class="col-12">
+                  <label class="form-label">System Prompt</label>
+                  <textarea name="system_prompt" class="form-control form-control-sm" rows="3">{{ t.system_prompt }}</textarea>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Writing Style</label>
+                  <input type="text" name="writing_style" class="form-control form-control-sm" value="{{ t.writing_style }}">
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Tone</label>
+                  <input type="text" name="tone" class="form-control form-control-sm" value="{{ t.tone }}">
+                </div>
+                <div class="col-12">
+                  <label class="form-label">Genre Instructions</label>
+                  <textarea name="genre_instructions" class="form-control form-control-sm" rows="3">{{ t.genre_instructions }}</textarea>
+                </div>
+              </div>
+              <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-sm btn-primary">
+                  <i class="fas fa-save me-1"></i>Save
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="deletePrompt({{ t.id }})">
+                  <i class="fas fa-trash me-1"></i>Delete
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- Add Prompt Modal -->
+<div class="modal fade" id="addPromptModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-0">
+        <h5 class="modal-title">Add Prompt Template</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" action="{{ url_for('admin.add_prompt') }}">
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label">Genre</label>
+              <select name="genre" class="form-select">
+                {% for g in genres %}<option value="{{ g }}">{{ g }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="col-md-8">
+              <label class="form-label">Template Name</label>
+              <input type="text" name="name" class="form-control" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label">System Prompt</label>
+              <textarea name="system_prompt" class="form-control" rows="3" placeholder="You are an expert novelist..."></textarea>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Writing Style</label>
+              <input type="text" name="writing_style" class="form-control">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Tone</label>
+              <input type="text" name="tone" class="form-control">
+            </div>
+            <div class="col-12">
+              <label class="form-label">Genre Instructions</label>
+              <textarea name="genre_instructions" class="form-control" rows="3"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-0">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Add Template</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block admin_js %}
+<script>
+async function savePrompt(e, id) {
+  e.preventDefault();
+  const form = e.target;
+  const data = Object.fromEntries(new FormData(form));
+  const resp = await fetch(`/julisunkan/prompts/${id}/edit`, {
+    method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body: new URLSearchParams(data)
+  });
+  if ((await resp.json()).success) showToast('Template saved!', 'success');
+}
+
+async function deletePrompt(id) {
+  if (!confirm('Delete this template?')) return;
+  const resp = await fetch(`/julisunkan/prompts/${id}/delete`, {method:'POST'});
+  if ((await resp.json()).success) location.reload();
+}
+</script>
+{% endblock %}

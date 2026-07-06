@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+{% block title %}Outline — {{ project.title }}{% endblock %}
+{% block breadcrumb %}
+<a href="{{ url_for('projects.project_detail', project_id=project.id) }}" class="text-muted text-decoration-none">{{ project.title[:25] }}</a>
+<i class="fas fa-chevron-right mx-2 text-muted small"></i>Outline
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Chapter Outline</h1>
+    <p class="page-subtitle">{{ project.title }} — {{ project.num_chapters }} planned chapters</p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <button class="btn btn-primary" id="btnGenOutline" {% if not groq_configured %}disabled title="Configure Groq API key first"{% endif %}>
+      <i class="fas fa-magic me-2"></i>Generate Outline
+    </button>
+    <button class="btn btn-outline-secondary" onclick="addChapterModal()">
+      <i class="fas fa-plus me-2"></i>Add Chapter
+    </button>
+    <a href="{{ url_for('chapters.generation_page', project_id=project.id) }}" class="btn btn-outline-primary">
+      <i class="fas fa-robot me-2"></i>Start Generation
+    </a>
+  </div>
+</div>
+
+{% if not groq_configured %}
+<div class="alert alert-warning mb-4">
+  <i class="fas fa-exclamation-triangle me-2"></i>
+  Configure your Groq API key in <a href="{{ url_for('admin.login') }}">Admin Settings</a> to use AI generation.
+</div>
+{% endif %}
+
+<div id="outlineLoading" class="text-center py-5" style="display:none">
+  <div class="spinner-border text-primary mb-3" style="width:3rem;height:3rem"></div>
+  <p class="text-muted">Generating outline with AI… This may take 30-60 seconds.</p>
+</div>
+
+<div id="outlineContainer">
+  {% if chapters %}
+  <div class="card data-card">
+    <div class="card-header d-flex align-items-center justify-content-between">
+      <span><i class="fas fa-list-ol me-2"></i>{{ chapters | length }} Chapters</span>
+      <small class="text-muted">Drag to reorder</small>
+    </div>
+    <div id="chapterList" class="chapter-outline-list">
+      {% for ch in chapters %}
+      <div class="outline-item" data-id="{{ ch.id }}" draggable="true">
+        <div class="outline-drag-handle"><i class="fas fa-grip-vertical"></i></div>
+        <div class="outline-num">{{ ch.chapter_number }}</div>
+        <div class="outline-content">
+          <div class="outline-title">{{ ch.chapter_title or 'Untitled Chapter' }}</div>
+          <div class="outline-summary text-muted small">{{ ch.summary[:120] }}{% if ch.summary|length > 120 %}…{% endif %}</div>
+          <div class="outline-meta">
+            <span class="badge bg-secondary">{{ '{:,}'.format(ch.target_word_count) }} words</span>
+          </div>
+        </div>
+        <div class="outline-actions">
+          <button class="btn btn-sm btn-outline-primary" onclick="editChapterModal({{ ch.id }}, {{ ch.chapter_title|tojson }}, {{ ch.summary|tojson }}, {{ ch.target_word_count }})">
+            <i class="fas fa-edit"></i>
+          </button>
+          <button class="btn btn-sm btn-outline-secondary" onclick="duplicateChapter({{ ch.id }})">
+            <i class="fas fa-copy"></i>
+          </button>
+          <button class="btn btn-sm btn-outline-danger" onclick="deleteChapter({{ ch.id }})">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon"><i class="fas fa-list-ol"></i></div>
+    <h3>No outline yet</h3>
+    <p>Generate an AI outline for your {{ project.num_chapters }}-chapter book, or add chapters manually.</p>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Add/Edit Chapter Modal -->
+<div class="modal fade" id="chapterModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-0">
+        <h5 class="modal-title" id="chapterModalTitle">Add Chapter</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label">Chapter Title</label>
+          <input type="text" id="chapterTitleInput" class="form-control" placeholder="Chapter title">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Summary</label>
+          <textarea id="chapterSummaryInput" class="form-control" rows="4" placeholder="What happens in this chapter?"></textarea>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Target Word Count</label>
+          <input type="number" id="chapterWcInput" class="form-control" value="{{ project.words_per_chapter }}" min="100">
+        </div>
+      </div>
+      <div class="modal-footer border-0">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="chapterSaveBtn" onclick="saveChapter()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const PROJECT_ID = {{ project.id }};
+let editingChapterId = null;
+
+document.getElementById('btnGenOutline').addEventListener('click', async function() {
+  if (!confirm('Generate a new AI outline? This will replace any existing outline.')) return;
+  document.getElementById('outlineLoading').style.display = 'block';
+  document.getElementById('outlineContainer').style.display = 'none';
+  this.disabled = true;
+  try {
+    const resp = await fetch(`/project/${PROJECT_ID}/outline/generate`, {method:'POST'});
+    const data = await resp.json();
+    if (data.error) { showToast(data.error, 'error'); return; }
+    showToast(`Generated ${data.count} chapters!`, 'success');
+    setTimeout(() => location.reload(), 500);
+  } catch(e) {
+    showToast('Generation failed: ' + e.message, 'error');
+  } finally {
+    document.getElementById('outlineLoading').style.display = 'none';
+    document.getElementById('outlineContainer').style.display = 'block';
+    this.disabled = false;
+  }
+});
+
+function addChapterModal() {
+  editingChapterId = null;
+  document.getElementById('chapterModalTitle').textContent = 'Add Chapter';
+  document.getElementById('chapterTitleInput').value = '';
+  document.getElementById('chapterSummaryInput').value = '';
+  document.getElementById('chapterWcInput').value = '{{ project.words_per_chapter }}';
+  new bootstrap.Modal(document.getElementById('chapterModal')).show();
+}
+
+function editChapterModal(id, title, summary, wc) {
+  editingChapterId = id;
+  document.getElementById('chapterModalTitle').textContent = 'Edit Chapter';
+  document.getElementById('chapterTitleInput').value = title;
+  document.getElementById('chapterSummaryInput').value = summary;
+  document.getElementById('chapterWcInput').value = wc;
+  new bootstrap.Modal(document.getElementById('chapterModal')).show();
+}
+
+async function saveChapter() {
+  const title = document.getElementById('chapterTitleInput').value;
+  const summary = document.getElementById('chapterSummaryInput').value;
+  const wc = document.getElementById('chapterWcInput').value;
+  const payload = {chapter_title: title, summary, target_word_count: wc};
+
+  let url = editingChapterId
+    ? `/project/${PROJECT_ID}/outline/chapter/${editingChapterId}/edit`
+    : `/project/${PROJECT_ID}/outline/chapter/add`;
+
+  const resp = await fetch(url, {
+    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)
+  });
+  const data = await resp.json();
+  if (data.success) {
+    bootstrap.Modal.getInstance(document.getElementById('chapterModal')).hide();
+    location.reload();
+  } else {
+    showToast(data.error || 'Save failed', 'error');
+  }
+}
+
+async function deleteChapter(id) {
+  if (!confirm('Delete this chapter from the outline?')) return;
+  const resp = await fetch(`/project/${PROJECT_ID}/outline/chapter/${id}/delete`, {method:'POST'});
+  if ((await resp.json()).success) location.reload();
+}
+
+async function duplicateChapter(id) {
+  const resp = await fetch(`/project/${PROJECT_ID}/outline/chapter/${id}/duplicate`, {method:'POST'});
+  if ((await resp.json()).success) location.reload();
+}
+
+// Drag to reorder
+let dragSrc = null;
+document.querySelectorAll('.outline-item').forEach(item => {
+  item.addEventListener('dragstart', e => { dragSrc = item; item.classList.add('dragging'); });
+  item.addEventListener('dragend', () => { item.classList.remove('dragging'); saveOrder(); });
+  item.addEventListener('dragover', e => { e.preventDefault(); const list = document.getElementById('chapterList'); const after = getDragAfter(list, e.clientY); if (!after) list.appendChild(dragSrc); else list.insertBefore(dragSrc, after); });
+});
+
+function getDragAfter(list, y) {
+  const items = [...list.querySelectorAll('.outline-item:not(.dragging)')];
+  return items.reduce((closest, child) => {
+    const box = child.getBoundingClientRect();
+    const offset = y - box.top - box.height / 2;
+    return (offset < 0 && offset > (closest.offset || -Infinity)) ? {offset, element: child} : closest;
+  }, {}).element;
+}
+
+async function saveOrder() {
+  const order = [...document.querySelectorAll('.outline-item')].map(i => i.dataset.id);
+  await fetch(`/project/${PROJECT_ID}/outline/reorder`, {
+    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({order})
+  });
+}
+</script>
+{% endblock %}

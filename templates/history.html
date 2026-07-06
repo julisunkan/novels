@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}All Projects — {{ app_name }}{% endblock %}
+{% block breadcrumb %}<i class="fas fa-history me-2"></i>All Projects{% endblock %}
+{% block topnav_actions %}
+<a href="{{ url_for('projects.new_project') }}" class="btn btn-primary btn-sm me-2">
+  <i class="fas fa-plus me-1"></i>New
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Project Library</h1>
+  <span class="badge bg-secondary">{{ projects | length }} projects</span>
+</div>
+
+{% if projects %}
+<div class="card data-card">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Genre</th>
+            <th>Status</th>
+            <th>Chapters</th>
+            <th>Words</th>
+            <th>Progress</th>
+            <th>Updated</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in projects %}
+          <tr>
+            <td>
+              <div class="fw-600">{{ p.title }}</div>
+              {% if p.subtitle %}<small class="text-muted">{{ p.subtitle }}</small>{% endif %}
+            </td>
+            <td><span class="genre-badge genre-{{ p.genre | lower | replace(' ', '-') | replace('/', '-') }}">{{ p.genre }}</span></td>
+            <td>
+              <span class="status-pill status-{{ p.status }}">
+                {% if p.status == 'completed' %}<i class="fas fa-check-circle"></i>
+                {% elif p.status in ['generating'] %}<i class="fas fa-spinner fa-spin"></i>
+                {% elif p.status == 'paused' %}<i class="fas fa-pause"></i>
+                {% else %}<i class="fas fa-circle-dot"></i>{% endif %}
+                {{ p.status | title }}
+              </span>
+            </td>
+            <td>{{ p.current_chapter }} / {{ p.num_chapters }}</td>
+            <td>{{ '{:,}'.format(p.total_words) }}</td>
+            <td style="min-width:100px">
+              {% set pct = (p.current_chapter / p.num_chapters * 100) | int if p.num_chapters else 0 %}
+              <div class="progress" style="height:6px">
+                <div class="progress-bar" style="width:{{ pct }}%"></div>
+              </div>
+              <small class="text-muted">{{ pct }}%</small>
+            </td>
+            <td><small class="text-muted">{{ p.updated_at[:10] }}</small></td>
+            <td>
+              <div class="d-flex gap-1">
+                <a href="{{ url_for('projects.project_detail', project_id=p.id) }}" class="btn btn-sm btn-primary" title="Open">
+                  <i class="fas fa-folder-open"></i>
+                </a>
+                <a href="{{ url_for('editor.editor_page', project_id=p.id) }}" class="btn btn-sm btn-outline-secondary" title="Editor">
+                  <i class="fas fa-pen"></i>
+                </a>
+                <a href="{{ url_for('exports.export_page', project_id=p.id) }}" class="btn btn-sm btn-outline-secondary" title="Export">
+                  <i class="fas fa-download"></i>
+                </a>
+                <form method="POST" action="{{ url_for('projects.duplicate_project', project_id=p.id) }}" style="display:inline">
+                  <button type="submit" class="btn btn-sm btn-outline-secondary" title="Duplicate">
+                    <i class="fas fa-copy"></i>
+                  </button>
+                </form>
+                <button class="btn btn-sm btn-outline-danger" onclick="confirmDelete({{ p.id }}, '{{ p.title | e }}')" title="Delete">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon"><i class="fas fa-book"></i></div>
+  <h3>No projects yet</h3>
+  <p>Your project library is empty. Create your first book to get started.</p>
+  <a href="{{ url_for('projects.new_project') }}" class="btn btn-primary">
+    <i class="fas fa-plus me-2"></i>Create First Book
+  </a>
+</div>
+{% endif %}
+
+<!-- Delete Confirm Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-0">
+        <h5 class="modal-title text-danger"><i class="fas fa-trash me-2"></i>Delete Project</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure you want to permanently delete <strong id="deleteProjectName"></strong>?</p>
+        <p class="text-muted small">This will delete all chapters, characters, world building, and exports. This cannot be undone.</p>
+      </div>
+      <div class="modal-footer border-0">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <form id="deleteForm" method="POST">
+          <button type="submit" class="btn btn-danger"><i class="fas fa-trash me-1"></i>Delete</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function confirmDelete(id, name) {
+  document.getElementById('deleteProjectName').textContent = name;
+  document.getElementById('deleteForm').action = `/project/${id}/delete`;
+  new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+</script>
+{% endblock %}

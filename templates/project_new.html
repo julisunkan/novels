@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+{% block title %}New Book — {{ app_name }}{% endblock %}
+{% block breadcrumb %}<i class="fas fa-plus-circle me-2"></i>New Book{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Create New Book</h1>
+</div>
+
+{% if not groq_configured %}
+<div class="alert alert-warning mb-4">
+  <i class="fas fa-exclamation-triangle me-2"></i>
+  <strong>Groq API key not configured.</strong>
+  AI generation will not work until you add your key in <a href="{{ url_for('admin.login') }}">Admin Settings</a>.
+</div>
+{% endif %}
+
+<form method="POST" action="{{ url_for('projects.create_project') }}" id="newProjectForm">
+  <div class="row g-4">
+    <!-- Left: Book Info -->
+    <div class="col-lg-8">
+      <div class="card form-card mb-4">
+        <div class="card-header"><i class="fas fa-book me-2"></i>Book Information</div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label">Book Title <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <input type="text" name="title" class="form-control" placeholder="Enter your book title" required>
+              <button type="button" class="btn btn-outline-primary" id="btnGenTitles" title="Generate title suggestions with AI">
+                <i class="fas fa-magic me-1"></i>AI Titles
+              </button>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Subtitle</label>
+            <input type="text" name="subtitle" id="subtitleInput" class="form-control" placeholder="Optional subtitle">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Book Description / Premise <span class="text-danger">*</span></label>
+            <textarea name="description" class="form-control" rows="4" placeholder="Describe your story concept, premise, and what makes it unique..." required></textarea>
+          </div>
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label">Genre</label>
+              <select name="genre" class="form-select">
+                {% for g in genres %}
+                <option value="{{ g }}">{{ g }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Story Type</label>
+              <select name="story_type" class="form-select">
+                {% for s in story_types %}
+                <option value="{{ s }}">{{ s }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Target Audience</label>
+              <select name="audience" class="form-select">
+                {% for a in audiences %}
+                <option value="{{ a }}">{{ a }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Writing Style</label>
+              <select name="writing_style" class="form-select">
+                {% for s in styles %}
+                <option value="{{ s }}">{{ s }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Point of View</label>
+              <select name="point_of_view" class="form-select">
+                {% for p in pov_options %}
+                <option value="{{ p }}">{{ p }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Tense</label>
+              <select name="tense" class="form-select">
+                {% for t in tenses %}
+                <option value="{{ t }}">{{ t }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Tone</label>
+              <select name="tone" class="form-select">
+                {% for t in tones %}
+                <option value="{{ t }}">{{ t }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Language</label>
+              <select name="language" class="form-select">
+                {% for l in languages %}
+                <option value="{{ l }}">{{ l }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Image Settings -->
+      <div class="card form-card">
+        <div class="card-header"><i class="fas fa-image me-2"></i>Image Prompts</div>
+        <div class="card-body">
+          <div class="form-check form-switch mb-3">
+            <input class="form-check-input" type="checkbox" name="include_images" id="includeImages">
+            <label class="form-check-label" for="includeImages">Generate image prompts for each chapter</label>
+          </div>
+          <div class="row g-3" id="imageOptions" style="display:none!important">
+            <div class="col-md-6">
+              <label class="form-label">Images Per Chapter</label>
+              <input type="number" name="images_per_chapter" class="form-control" value="1" min="1" max="5">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Image Style</label>
+              <select name="image_style" class="form-select">
+                {% for s in image_styles %}
+                <option value="{{ s }}">{{ s }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: AI Settings -->
+    <div class="col-lg-4">
+      <div class="card form-card mb-4">
+        <div class="card-header"><i class="fas fa-sliders-h me-2"></i>Book Settings</div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label">Number of Chapters</label>
+            <input type="number" name="num_chapters" class="form-control" value="10" min="1" max="100">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Words Per Chapter</label>
+            <input type="number" name="words_per_chapter" class="form-control" value="2000" min="500" max="10000" step="100">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Creativity Level</label>
+            <div class="creativity-selector">
+              {% for val, label in creativity %}
+              <input type="radio" class="btn-check" name="creativity_level" id="cr_{{ val }}" value="{{ val }}" {% if val == 'balanced' %}checked{% endif %}>
+              <label class="btn btn-outline-primary btn-sm" for="cr_{{ val }}">{{ label }}</label>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card form-card mb-4">
+        <div class="card-header">
+          <i class="fas fa-robot me-2"></i>AI Parameters
+          <button type="button" class="btn btn-link btn-sm p-0 ms-auto" data-bs-toggle="collapse" data-bs-target="#aiParams">
+            <i class="fas fa-chevron-down"></i>
+          </button>
+        </div>
+        <div class="collapse" id="aiParams">
+          <div class="card-body">
+            <div class="mb-3">
+              <label class="form-label d-flex justify-content-between">
+                Temperature <span class="badge bg-secondary" id="tempVal">0.7</span>
+              </label>
+              <input type="range" name="temperature" class="form-range" min="0.1" max="1.5" step="0.1" value="0.7"
+                     oninput="document.getElementById('tempVal').textContent=this.value">
+            </div>
+            <div class="mb-3">
+              <label class="form-label d-flex justify-content-between">
+                Top-P <span class="badge bg-secondary" id="topPVal">0.9</span>
+              </label>
+              <input type="range" name="top_p" class="form-range" min="0.1" max="1.0" step="0.05" value="0.9"
+                     oninput="document.getElementById('topPVal').textContent=this.value">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Max Tokens</label>
+              <select name="max_tokens" class="form-select form-select-sm">
+                <option value="2048">2,048</option>
+                <option value="4096" selected>4,096</option>
+                <option value="8192">8,192</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary w-100 btn-lg">
+        <i class="fas fa-rocket me-2"></i>Create Project
+      </button>
+    </div>
+  </div>
+</form>
+
+<!-- AI Titles Modal -->
+<div class="modal fade" id="titlesModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-0">
+        <h5 class="modal-title"><i class="fas fa-magic me-2"></i>AI Title Generator</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="titlesLoading" class="text-center py-4">
+          <div class="spinner-border text-primary mb-3"></div>
+          <p>Generating title suggestions...</p>
+        </div>
+        <div id="titlesContent" style="display:none">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <h6 class="fw-600 mb-2">Titles</h6>
+              <div id="titlesList" class="suggestion-list"></div>
+            </div>
+            <div class="col-md-6">
+              <h6 class="fw-600 mb-2">Subtitles</h6>
+              <div id="subtitlesList" class="suggestion-list"></div>
+            </div>
+          </div>
+        </div>
+        <div id="titlesError" class="alert alert-danger" style="display:none"></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('includeImages').addEventListener('change', function() {
+  document.getElementById('imageOptions').style.setProperty('display', this.checked ? 'flex' : 'none', 'important');
+});
+
+document.getElementById('btnGenTitles').addEventListener('click', async function() {
+  const modal = new bootstrap.Modal(document.getElementById('titlesModal'));
+  modal.show();
+  document.getElementById('titlesLoading').style.display = 'block';
+  document.getElementById('titlesContent').style.display = 'none';
+  document.getElementById('titlesError').style.display = 'none';
+
+  const form = document.getElementById('newProjectForm');
+  const fd = new FormData(form);
+  // Temp project approach: post to a special endpoint
+  // We'll call a preview endpoint or just reuse the generate titles endpoint
+  // For new projects, we'll POST to /api/generate-titles-preview
+  try {
+    const resp = await fetch('/api/generate-titles-preview', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        genre: fd.get('genre') || 'Fantasy',
+        description: fd.get('description') || '',
+        tone: fd.get('tone') || 'Adventurous',
+        audience: fd.get('audience') || 'Adult',
+      })
+    });
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error);
+    document.getElementById('titlesLoading').style.display = 'none';
+    document.getElementById('titlesContent').style.display = 'block';
+    const titlesList = document.getElementById('titlesList');
+    const subtitlesList = document.getElementById('subtitlesList');
+    titlesList.innerHTML = '';
+    subtitlesList.innerHTML = '';
+    (data.data.titles || []).forEach(t => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'suggestion-btn';
+      btn.textContent = t;
+      btn.onclick = () => {
+        document.querySelector('[name=title]').value = t;
+        bootstrap.Modal.getInstance(document.getElementById('titlesModal')).hide();
+      };
+      titlesList.appendChild(btn);
+    });
+    (data.data.subtitles || []).forEach(s => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'suggestion-btn';
+      btn.textContent = s;
+      btn.onclick = () => {
+        document.getElementById('subtitleInput').value = s;
+        bootstrap.Modal.getInstance(document.getElementById('titlesModal')).hide();
+      };
+      subtitlesList.appendChild(btn);
+    });
+  } catch(e) {
+    document.getElementById('titlesLoading').style.display = 'none';
+    document.getElementById('titlesError').style.display = 'block';
+    document.getElementById('titlesError').textContent = e.message;
+  }
+});
+</script>
+{% endblock %}

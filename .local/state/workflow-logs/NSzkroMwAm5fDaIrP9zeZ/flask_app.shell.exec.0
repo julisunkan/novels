@@ -1,0 +1,36 @@
+ * Serving Flask app 'app'
+ * Debug mode: on
+[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://172.24.0.2:5000
+[33mPress CTRL+C to quit[0m
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 904-547-509
+127.0.0.1 - - [06/Jul/2026 18:01:36] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [06/Jul/2026 18:01:37] "GET /static/css/style.css HTTP/1.1" 200 -
+127.0.0.1 - - [06/Jul/2026 18:01:38] "GET /static/js/main.js HTTP/1.1" 200 -
+127.0.0.1 - - [06/Jul/2026 18:01:41] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [06/Jul/2026 18:01:41] "GET /static/css/style.css HTTP/1.1" 200 -
+127.0.0.1 - - [06/Jul/2026 18:01:41] "GET /static/js/main.js HTTP/1.1" 200 -
+127.0.0.1 - - [06/Jul/2026 18:01:41] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+ * Detected change in '/home/runner/workspace/app.py', reloading
+ * Restarting with stat
+Traceback (most recent call last):
+  File "/home/runner/workspace/app.py", line 549, in <module>
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 612, in run
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/serving.py", line 1116, in run_simple
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/_reloader.py", line 463, in run_with_reloader
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/_reloader.py", line 275, in restart_with_reloader
+  File "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/subprocess.py", line 389, in call
+    with Popen(*popenargs, **kwargs) as p:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/subprocess.py", line 1026, in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+  File "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/subprocess.py", line 1840, in _execute_child
+    self._posix_spawn(args, executable, env, restore_signals,
+  File "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/subprocess.py", line 1784, in _posix_spawn
+    self.pid = os.posix_spawn(executable, args, env, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/home/runner/workspace/.pythonlibs/bin/python'

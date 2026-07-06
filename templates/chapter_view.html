@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% block title %}Chapter {{ chapter.chapter_number }} — {{ project.title }}{% endblock %}
+{% block breadcrumb %}
+<a href="{{ url_for('projects.project_detail', project_id=project.id) }}" class="text-muted text-decoration-none">{{ project.title[:20] }}</a>
+<i class="fas fa-chevron-right mx-2 text-muted small"></i>
+Chapter {{ chapter.chapter_number }}
+{% endblock %}
+{% block topnav_actions %}
+<a href="{{ url_for('editor.editor_page', project_id=project.id) }}" class="btn btn-outline-secondary btn-sm me-2">
+  <i class="fas fa-pen me-1"></i>Edit in Editor
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <div class="text-muted small mb-1">Chapter {{ chapter.chapter_number }}</div>
+    <h1 class="page-title">{{ chapter.chapter_title }}</h1>
+    <div class="d-flex gap-3 text-muted small">
+      <span><i class="fas fa-align-left me-1"></i>{{ '{:,}'.format(chapter.word_count) }} words</span>
+      <span class="status-pill status-{{ chapter.status }}">{{ chapter.status }}</span>
+    </div>
+  </div>
+  <div class="d-flex gap-2">
+    <form method="POST" action="{{ url_for('chapters.duplicate_chapter_content', project_id=project.id, chapter_id=chapter.id) }}" style="display:inline">
+      <button type="submit" class="btn btn-outline-secondary btn-sm"><i class="fas fa-copy me-1"></i>Duplicate</button>
+    </form>
+    <button class="btn btn-outline-warning btn-sm" onclick="regenChapter()">
+      <i class="fas fa-redo me-1"></i>Regenerate
+    </button>
+    <button class="btn btn-outline-danger btn-sm" onclick="deleteChapter()">
+      <i class="fas fa-trash me-1"></i>Delete
+    </button>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-8">
+    <div class="chapter-reader">
+      <div class="chapter-content" id="chapterContent">
+        {{ chapter.content | replace('\n', '<br>') | safe }}
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    {% if chapter.summary %}
+    <div class="card form-card mb-3">
+      <div class="card-header"><i class="fas fa-brain me-2"></i>Chapter Memory</div>
+      <div class="card-body">
+        {% if chapter.summary %}
+        <div class="memory-section">
+          <label>Summary</label>
+          <p>{{ chapter.summary }}</p>
+        </div>
+        {% endif %}
+        {% if chapter.important_events %}
+        <div class="memory-section">
+          <label>Key Events</label>
+          <p>{{ chapter.important_events }}</p>
+        </div>
+        {% endif %}
+        {% if chapter.characters_introduced %}
+        <div class="memory-section">
+          <label>Characters Introduced</label>
+          <p>{{ chapter.characters_introduced }}</p>
+        </div>
+        {% endif %}
+        {% if chapter.locations %}
+        <div class="memory-section">
+          <label>Locations</label>
+          <p>{{ chapter.locations }}</p>
+        </div>
+        {% endif %}
+        {% if chapter.unresolved_plot_points %}
+        <div class="memory-section">
+          <label>Unresolved Threads</label>
+          <p>{{ chapter.unresolved_plot_points }}</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if images %}
+    <div class="card form-card">
+      <div class="card-header"><i class="fas fa-image me-2"></i>Image Prompts</div>
+      <div class="card-body">
+        {% for img in images %}
+        <div class="image-prompt-box mb-2">
+          <div class="d-flex justify-content-between align-items-start">
+            <span class="badge bg-secondary mb-1">{{ img.style }}</span>
+            <button class="btn btn-xs btn-outline-secondary" onclick="copyToClipboard('{{ img.prompt | e }}')">
+              <i class="fas fa-copy"></i>
+            </button>
+          </div>
+          <p class="small mb-0">{{ img.prompt }}</p>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<div id="regenModal" class="modal fade" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-0">
+        <h5 class="modal-title"><i class="fas fa-redo me-2"></i>Regenerating Chapter</h5>
+      </div>
+      <div class="modal-body text-center py-4">
+        <div class="spinner-border text-primary mb-3" style="width:3rem;height:3rem"></div>
+        <p>Regenerating chapter with AI… This may take 30-60 seconds.</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const PROJECT_ID = {{ project.id }};
+const CHAPTER_ID = {{ chapter.id }};
+
+async function regenChapter() {
+  if (!confirm('Regenerate this chapter? The current content will be replaced.')) return;
+  const modal = new bootstrap.Modal(document.getElementById('regenModal'));
+  modal.show();
+  try {
+    const resp = await fetch(`/project/${PROJECT_ID}/chapter/${CHAPTER_ID}/regenerate`, {method:'POST'});
+    const data = await resp.json();
+    modal.hide();
+    if (data.error) { showToast(data.error, 'error'); return; }
+    showToast('Chapter regenerated!', 'success');
+    location.reload();
+  } catch(e) {
+    modal.hide();
+    showToast('Failed: ' + e.message, 'error');
+  }
+}
+
+async function deleteChapter() {
+  if (!confirm('Permanently delete this chapter?')) return;
+  const resp = await fetch(`/project/${PROJECT_ID}/chapter/${CHAPTER_ID}/delete`, {method:'POST'});
+  if ((await resp.json()).success) {
+    window.location.href = `/project/${PROJECT_ID}`;
+  }
+}
+
+function copyToClipboard(text) {
+  navigator.clipboard.writeText(text).then(() => showToast('Copied!', 'success'));
+}
+</script>
+{% endblock %}

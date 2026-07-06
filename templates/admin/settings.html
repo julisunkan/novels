@@ -1,0 +1,139 @@
+{% extends "admin/base.html" %}
+{% block title %}Settings{% endblock %}
+{% block breadcrumb %}Settings{% endblock %}
+
+{% block admin_content %}
+<div class="page-header">
+  <h1 class="page-title">Admin Settings</h1>
+</div>
+
+<div class="row g-4">
+  <!-- Groq API -->
+  <div class="col-lg-6">
+    <div class="card form-card">
+      <div class="card-header"><i class="fas fa-robot me-2"></i>Groq API Configuration</div>
+      <div class="card-body">
+        <form method="POST">
+          <input type="hidden" name="action" value="save">
+          <div class="mb-3">
+            <label class="form-label">Groq API Key</label>
+            <div class="input-group">
+              <input type="password" name="groq_api_key" class="form-control" value="{{ s.get('groq_api_key','') }}" placeholder="gsk_...">
+              <button type="button" class="btn btn-outline-secondary" onclick="togglePw(this)">
+                <i class="fas fa-eye"></i>
+              </button>
+            </div>
+            <small class="text-muted">Get your key at <a href="https://console.groq.com" target="_blank">console.groq.com</a></small>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Model</label>
+            <select name="groq_model" class="form-select">
+              {% for val, label in groq_models %}
+              <option value="{{ val }}" {% if s.get('groq_model') == val %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label">Temperature</label>
+              <input type="number" name="groq_temperature" class="form-control" value="{{ s.get('groq_temperature','0.7') }}" step="0.1" min="0.1" max="2.0">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Top-P</label>
+              <input type="number" name="groq_top_p" class="form-control" value="{{ s.get('groq_top_p','0.9') }}" step="0.05" min="0.1" max="1.0">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Max Tokens</label>
+              <input type="number" name="groq_max_tokens" class="form-control" value="{{ s.get('groq_max_tokens','4096') }}" step="512" min="512">
+            </div>
+          </div>
+          <div class="mt-3">
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-save me-2"></i>Save API Settings
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- App Settings -->
+  <div class="col-lg-6">
+    <div class="card form-card">
+      <div class="card-header"><i class="fas fa-cog me-2"></i>Application Settings</div>
+      <div class="card-body">
+        <form method="POST">
+          <input type="hidden" name="action" value="save">
+          <div class="mb-3">
+            <label class="form-label">App Name</label>
+            <input type="text" name="app_name" class="form-control" value="{{ s.get('app_name','AI Novel Creator') }}">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Footer Text</label>
+            <input type="text" name="app_footer" class="form-control" value="{{ s.get('app_footer','') }}">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Default Theme</label>
+            <select name="default_theme" class="form-select">
+              <option value="dark" {% if s.get('default_theme') == 'dark' %}selected{% endif %}>Dark</option>
+              <option value="light" {% if s.get('default_theme') == 'light' %}selected{% endif %}>Light</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Default Font</label>
+            <select name="default_font" class="form-select">
+              {% for font in ['Georgia', 'Arial', 'Times New Roman', 'Courier New', 'Inter'] %}
+              <option value="{{ font }}" {% if s.get('default_font') == font %}selected{% endif %}>{{ font }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" name="maintenance_mode" value="1" id="maintMode"
+                     {% if s.get('maintenance_mode') == '1' %}checked{% endif %}>
+              <label class="form-check-label" for="maintMode">Maintenance Mode</label>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save me-2"></i>Save App Settings
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Change Password -->
+  <div class="col-lg-6">
+    <div class="card form-card">
+      <div class="card-header"><i class="fas fa-key me-2"></i>Change Admin Password</div>
+      <div class="card-body">
+        <form method="POST">
+          <input type="hidden" name="action" value="change_password">
+          <div class="mb-3">
+            <label class="form-label">New Password</label>
+            <input type="password" name="new_password" class="form-control" placeholder="Minimum 6 characters" minlength="6">
+          </div>
+          <button type="submit" class="btn btn-warning">
+            <i class="fas fa-key me-2"></i>Change Password
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block admin_js %}
+<script>
+function togglePw(btn) {
+  const input = btn.previousElementSibling;
+  if (input.type === 'password') {
+    input.type = 'text';
+    btn.innerHTML = '<i class="fas fa-eye-slash"></i>';
+  } else {
+    input.type = 'password';
+    btn.innerHTML = '<i class="fas fa-eye"></i>';
+  }
+}
+</script>
+{% endblock %}

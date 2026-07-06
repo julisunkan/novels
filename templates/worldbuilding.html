@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% block title %}World Builder — {{ project.title }}{% endblock %}
+{% block breadcrumb %}
+<a href="{{ url_for('projects.project_detail', project_id=project.id) }}" class="text-muted text-decoration-none">{{ project.title[:25] }}</a>
+<i class="fas fa-chevron-right mx-2 text-muted small"></i>World Builder
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">World Builder</h1>
+    <p class="page-subtitle">Build the world of your story — automatically injected into every chapter prompt</p>
+  </div>
+  <button class="btn btn-primary" onclick="openEntryModal()">
+    <i class="fas fa-plus me-2"></i>Add Entry
+  </button>
+</div>
+
+<div class="world-tabs">
+  <ul class="nav nav-pills flex-wrap mb-4" id="worldTabs">
+    <li class="nav-item">
+      <button class="nav-link active" data-cat="all" onclick="filterCat('all', this)">
+        <i class="fas fa-globe me-1"></i>All
+      </button>
+    </li>
+    {% for cat_key, cat_data in grouped.items() %}
+    {% if cat_data.entries %}
+    <li class="nav-item">
+      <button class="nav-link" data-cat="{{ cat_key }}" onclick="filterCat('{{ cat_key }}', this)">
+        {{ cat_data.label }}
+        <span class="badge bg-secondary ms-1">{{ cat_data.entries | length }}</span>
+      </button>
+    </li>
+    {% endif %}
+    {% endfor %}
+  </ul>
+</div>
+
+{% set all_entries_count = grouped.values() | map(attribute='entries') | map('length') | sum %}
+{% if all_entries_count > 0 %}
+<div class="row g-3" id="worldGrid">
+  {% for cat_key, cat_data in grouped.items() %}
+  {% for entry in cat_data.entries %}
+  <div class="col-12 col-md-6 col-xl-4 world-entry-col" data-cat="{{ cat_key }}">
+    <div class="world-card">
+      <div class="world-card-header">
+        <span class="world-category-badge">{{ cat_data.label }}</span>
+        <div class="world-card-actions">
+          <button class="btn btn-sm btn-outline-primary" onclick="editEntry({{ entry.id }})">
+            <i class="fas fa-edit"></i>
+          </button>
+          <button class="btn btn-sm btn-outline-danger" onclick="deleteEntry({{ entry.id }}, '{{ entry.name | e }}')">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      </div>
+      <h4 class="world-card-name">{{ entry.name }}</h4>
+      {% if entry.description %}
+      <p class="world-card-desc">{{ entry.description[:120] }}{% if entry.description|length > 120 %}…{% endif %}</p>
+      {% endif %}
+      {% if entry.details %}
+      <p class="world-card-details text-muted small">{{ entry.details[:80] }}{% if entry.details|length > 80 %}…{% endif %}</p>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon"><i class="fas fa-globe"></i></div>
+  <h3>No world building entries yet</h3>
+  <p>Add locations, magic systems, history, lore, and more. All entries are automatically included in chapter generation prompts.</p>
+  <button class="btn btn-primary" onclick="openEntryModal()">
+    <i class="fas fa-plus me-2"></i>Add First Entry
+  </button>
+</div>
+{% endif %}
+
+<!-- Entry Modal -->
+<div class="modal fade" id="entryModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-0">
+        <h5 class="modal-title" id="entryModalTitle">Add World Entry</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="entryId">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Category</label>
+            <select id="entryCategory" class="form-select">
+              {% for cat_key, cat_label in categories %}
+              <option value="{{ cat_key }}">{{ cat_label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Name *</label>
+            <input id="entryName" class="form-control" placeholder="Name of this entry">
+          </div>
+          <div class="col-12">
+            <label class="form-label">Description</label>
+            <textarea id="entryDescription" class="form-control" rows="3" placeholder="Brief description"></textarea>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Details</label>
+            <textarea id="entryDetails" class="form-control" rows="4" placeholder="Extended details, history, rules, etc."></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer border-0">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="saveEntry()">Save Entry</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const PROJECT_ID = {{ project.id }};
+
+function filterCat(cat, btn) {
+  document.querySelectorAll('#worldTabs .nav-link').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.world-entry-col').forEach(col => {
+    col.style.display = (cat === 'all' || col.dataset.cat === cat) ? '' : 'none';
+  });
+}
+
+function openEntryModal() {
+  document.getElementById('entryModalTitle').textContent = 'Add World Entry';
+  document.getElementById('entryId').value = '';
+  document.getElementById('entryCategory').value = 'locations';
+  document.getElementById('entryName').value = '';
+  document.getElementById('entryDescription').value = '';
+  document.getElementById('entryDetails').value = '';
+  new bootstrap.Modal(document.getElementById('entryModal')).show();
+}
+
+async function editEntry(id) {
+  const resp = await fetch(`/project/${PROJECT_ID}/worldbuilding/${id}`);
+  const e = await resp.json();
+  document.getElementById('entryModalTitle').textContent = 'Edit Entry';
+  document.getElementById('entryId').value = id;
+  document.getElementById('entryCategory').value = e.category;
+  document.getElementById('entryName').value = e.name;
+  document.getElementById('entryDescription').value = e.description;
+  document.getElementById('entryDetails').value = e.details;
+  new bootstrap.Modal(document.getElementById('entryModal')).show();
+}
+
+async function saveEntry() {
+  const id = document.getElementById('entryId').value;
+  const payload = {
+    category: document.getElementById('entryCategory').value,
+    name: document.getElementById('entryName').value,
+    description: document.getElementById('entryDescription').value,
+    details: document.getElementById('entryDetails').value,
+  };
+  if (!payload.name.trim()) { showToast('Name is required', 'error'); return; }
+  const url = id ? `/project/${PROJECT_ID}/worldbuilding/${id}/edit` : `/project/${PROJECT_ID}/worldbuilding/add`;
+  const resp = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+  if ((await resp.json()).success) { bootstrap.Modal.getInstance(document.getElementById('entryModal')).hide(); location.reload(); }
+}
+
+async function deleteEntry(id, name) {
+  if (!confirm(`Delete "${name}"?`)) return;
+  const resp = await fetch(`/project/${PROJECT_ID}/worldbuilding/${id}/delete`, {method:'POST'});
+  if ((await resp.json()).success) location.reload();
+}
+</script>
+{% endblock %}
