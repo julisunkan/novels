@@ -1,112 +1,374 @@
 {% extends "base.html" %}
 {% block title %}All Projects — {{ app_name }}{% endblock %}
-{% block breadcrumb %}<i class="fas fa-history me-2"></i>All Projects{% endblock %}
+{% block breadcrumb %}<i class="fas fa-layer-group me-2"></i>Project Library{% endblock %}
 {% block topnav_actions %}
 <a href="{{ url_for('projects.new_project') }}" class="btn btn-primary btn-sm me-2">
-  <i class="fas fa-plus me-1"></i>New
+  <i class="fas fa-plus me-1"></i>New Project
 </a>
 {% endblock %}
 
-{% block content %}
-<div class="page-header">
-  <h1 class="page-title">Project Library</h1>
-  <span class="badge bg-secondary">{{ projects | length }} projects</span>
-</div>
+{% block extra_css %}
+<style>
+/* ── Palette ─────────────────────────────────────────── */
+:root {
+  --hl-green:  #2ecc71;
+  --hl-green2: #27ae60;
+  --hl-blue:   #3498db;
+  --hl-blue2:  #2471a3;
+  --hl-lemon:  #f1c40f;
+  --hl-lemon2: #c9a90a;
+  --hl-red:    #e74c3c;
+  --hl-red2:   #c0392b;
+}
 
-{% if projects %}
-<div class="card data-card">
-  <div class="card-body p-0">
-    <div class="table-responsive">
-      <table class="table table-hover align-middle mb-0">
-        <thead>
-          <tr>
-            <th>Title</th>
-            <th>Genre</th>
-            <th>Status</th>
-            <th>Chapters</th>
-            <th>Words</th>
-            <th>Progress</th>
-            <th>Updated</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for p in projects %}
-          <tr>
-            <td>
-              <div class="fw-600">{{ p.title }}</div>
-              {% if p.subtitle %}<small class="text-muted">{{ p.subtitle }}</small>{% endif %}
-            </td>
-            <td><span class="genre-badge genre-{{ p.genre | lower | replace(' ', '-') | replace('/', '-') }}">{{ p.genre }}</span></td>
-            <td>
-              <span class="status-pill status-{{ p.status }}">
-                {% if p.status == 'completed' %}<i class="fas fa-check-circle"></i>
-                {% elif p.status in ['generating'] %}<i class="fas fa-spinner fa-spin"></i>
-                {% elif p.status == 'paused' %}<i class="fas fa-pause"></i>
-                {% else %}<i class="fas fa-circle-dot"></i>{% endif %}
-                {{ p.status | title }}
-              </span>
-            </td>
-            <td>{{ p.current_chapter }} / {{ p.num_chapters }}</td>
-            <td>{{ '{:,}'.format(p.total_words) }}</td>
-            <td style="min-width:100px">
-              {% set pct = (p.current_chapter / p.num_chapters * 100) | int if p.num_chapters else 0 %}
-              <div class="progress" style="height:6px">
-                <div class="progress-bar" style="width:{{ pct }}%"></div>
-              </div>
-              <small class="text-muted">{{ pct }}%</small>
-            </td>
-            <td><small class="text-muted">{{ p.updated_at[:10] }}</small></td>
-            <td>
-              <div class="d-flex gap-1">
-                <a href="{{ url_for('projects.project_detail', project_id=p.id) }}" class="btn btn-sm btn-primary" title="Open">
-                  <i class="fas fa-folder-open"></i>
-                </a>
-                <a href="{{ url_for('editor.editor_page', project_id=p.id) }}" class="btn btn-sm btn-outline-secondary" title="Editor">
-                  <i class="fas fa-pen"></i>
-                </a>
-                <a href="{{ url_for('exports.export_page', project_id=p.id) }}" class="btn btn-sm btn-outline-secondary" title="Export">
-                  <i class="fas fa-download"></i>
-                </a>
-                <form method="POST" action="{{ url_for('projects.duplicate_project', project_id=p.id) }}" style="display:inline">
-                  <button type="submit" class="btn btn-sm btn-outline-secondary" title="Duplicate">
-                    <i class="fas fa-copy"></i>
-                  </button>
-                </form>
-                <button class="btn btn-sm btn-outline-danger" onclick="confirmDelete({{ p.id }}, '{{ p.title | e }}')" title="Delete">
-                  <i class="fas fa-trash"></i>
-                </button>
-              </div>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+/* ── Hero header ─────────────────────────────────────── */
+.lib-hero {
+  border-radius: 16px;
+  padding: 28px 32px 22px;
+  margin-bottom: 24px;
+  background: linear-gradient(135deg,
+    rgba(46,204,113,0.12) 0%,
+    rgba(52,152,219,0.12) 35%,
+    rgba(241,196,15,0.10) 70%,
+    rgba(231,76,60,0.10) 100%);
+  border: 1px solid var(--border-color);
+  position: relative;
+  overflow: hidden;
+}
+.lib-hero::before {
+  content: '';
+  position: absolute;
+  top: -60px; right: -60px;
+  width: 200px; height: 200px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(52,152,219,0.15), transparent 70%);
+  pointer-events: none;
+}
+.lib-hero-title {
+  font-size: 1.9rem;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  margin: 0 0 18px;
+  color: var(--text-heading);
+}
+.lib-hero-title span { background: linear-gradient(90deg, var(--hl-green), var(--hl-blue)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+
+/* ── Stat pills ──────────────────────────────────────── */
+.stat-pills { display: flex; gap: 12px; flex-wrap: wrap; }
+.stat-pill {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 18px;
+  border-radius: 50px;
+  font-size: 0.88rem; font-weight: 600;
+  border: 1.5px solid;
+}
+.stat-pill .sp-num { font-size: 1.3rem; font-weight: 700; line-height: 1; }
+.stat-pill .sp-label { font-size: 0.75rem; font-weight: 500; opacity: 0.85; }
+.sp-green  { background: rgba(46,204,113,0.12); border-color: rgba(46,204,113,0.35); color: var(--hl-green); }
+.sp-blue   { background: rgba(52,152,219,0.12); border-color: rgba(52,152,219,0.35); color: var(--hl-blue);  }
+.sp-lemon  { background: rgba(241,196,15,0.12); border-color: rgba(241,196,15,0.35); color: var(--hl-lemon2);}
+.sp-red    { background: rgba(231,76,60,0.12);  border-color: rgba(231,76,60,0.35);  color: var(--hl-red);   }
+
+/* ── Project cards ───────────────────────────────────── */
+.project-cards { display: flex; flex-direction: column; gap: 12px; }
+
+.pcard {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  border-left: 5px solid var(--hl-blue);
+  display: flex;
+  align-items: stretch;
+  transition: box-shadow 0.18s, transform 0.18s;
+  overflow: hidden;
+}
+.pcard-main { flex: 1 1 0; min-width: 0; }
+.pcard:hover { box-shadow: 0 4px 24px rgba(0,0,0,0.18); transform: translateY(-1px); }
+.pcard.status-completed  { border-left-color: var(--hl-green); }
+.pcard.status-draft      { border-left-color: var(--hl-lemon); }
+.pcard.status-generating { border-left-color: var(--hl-blue);  }
+.pcard.status-paused     { border-left-color: var(--hl-red);   }
+
+.pcard-main  { padding: 16px 20px; min-width: 0; }
+.pcard-meta  { padding: 16px 12px; display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 90px; }
+.pcard-prog  { padding: 16px 12px; min-width: 120px; }
+.pcard-stats { padding: 16px 14px; display: flex; flex-direction: column; gap: 4px; min-width: 90px; }
+.pcard-acts  { padding: 16px 16px 16px 8px; display: flex; gap: 6px; align-items: center; }
+
+.pcard-title {
+  font-size: 1rem; font-weight: 700;
+  color: var(--text-heading);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  margin-bottom: 2px;
+}
+.pcard-subtitle { font-size: 0.78rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Genre badge */
+.genre-chip {
+  display: inline-flex; align-items: center;
+  padding: 3px 10px; border-radius: 50px;
+  font-size: 0.72rem; font-weight: 600; letter-spacing: .3px;
+  background: rgba(52,152,219,0.15);
+  color: var(--hl-blue);
+  border: 1px solid rgba(52,152,219,0.3);
+  margin-top: 6px;
+}
+
+/* Status badge */
+.status-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 12px; border-radius: 50px;
+  font-size: 0.75rem; font-weight: 600;
+}
+.sc-completed  { background: rgba(46,204,113,0.15);  color: var(--hl-green);  border: 1px solid rgba(46,204,113,0.3); }
+.sc-draft      { background: rgba(241,196,15,0.15);  color: var(--hl-lemon2); border: 1px solid rgba(241,196,15,0.3); }
+.sc-generating { background: rgba(52,152,219,0.15);  color: var(--hl-blue);   border: 1px solid rgba(52,152,219,0.3); }
+.sc-paused     { background: rgba(231,76,60,0.15);   color: var(--hl-red);    border: 1px solid rgba(231,76,60,0.3);  }
+.sc-default    { background: rgba(150,150,150,0.12); color: var(--text-muted); border: 1px solid var(--border-color); }
+
+/* Progress bar */
+.lib-progress { height: 8px; border-radius: 4px; background: var(--border-color); overflow: hidden; margin-bottom: 5px; }
+.lib-progress-bar { height: 100%; border-radius: 4px; transition: width .4s; }
+.pb-completed  { background: linear-gradient(90deg, var(--hl-green2), var(--hl-green)); }
+.pb-draft      { background: linear-gradient(90deg, var(--hl-lemon2), var(--hl-lemon)); }
+.pb-generating { background: linear-gradient(90deg, var(--hl-blue2), var(--hl-blue)); }
+.pb-paused     { background: linear-gradient(90deg, var(--hl-red2), var(--hl-red)); }
+.pb-default    { background: var(--text-muted); }
+.lib-pct { font-size: 0.72rem; color: var(--text-muted); }
+.lib-prog-label { font-size: 0.7rem; color: var(--text-muted); margin-bottom: 3px; }
+
+/* Stat numbers */
+.stat-num  { font-size: 1rem; font-weight: 700; color: var(--text-heading); line-height: 1; }
+.stat-unit { font-size: 0.68rem; color: var(--text-muted); }
+
+/* Action buttons */
+.act-btn {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  border: 1.5px solid;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 0.8rem; cursor: pointer; text-decoration: none;
+  transition: background 0.15s, transform 0.12s;
+  background: transparent;
+}
+.act-btn:hover { transform: scale(1.12); }
+
+.act-green  { border-color: var(--hl-green);  color: var(--hl-green);  }
+.act-green:hover  { background: rgba(46,204,113,0.18); }
+.act-blue   { border-color: var(--hl-blue);   color: var(--hl-blue);   }
+.act-blue:hover   { background: rgba(52,152,219,0.18); }
+.act-lemon  { border-color: var(--hl-lemon2); color: var(--hl-lemon2); }
+.act-lemon:hover  { background: rgba(241,196,15,0.18); }
+.act-neutral { border-color: var(--border-color); color: var(--text-muted); }
+.act-neutral:hover { background: rgba(150,150,150,0.12); color: var(--text); }
+.act-red    { border-color: var(--hl-red);    color: var(--hl-red);    }
+.act-red:hover    { background: rgba(231,76,60,0.18); }
+
+/* ── Search bar ──────────────────────────────────────── */
+.lib-search-wrap { position: relative; margin-bottom: 18px; }
+.lib-search-wrap i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 0.9rem; }
+.lib-search {
+  width: 100%; padding: 10px 14px 10px 38px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border-color);
+  background: var(--bg-input);
+  color: var(--text);
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color .2s;
+}
+.lib-search:focus { border-color: var(--hl-blue); }
+
+/* ── Section label ───────────────────────────────────── */
+.lib-section-label {
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--text-muted);
+  margin-bottom: 10px;
+  display: flex; align-items: center; gap: 8px;
+}
+.lib-section-label::after { content: ''; flex: 1; height: 1px; background: var(--border-color); }
+
+/* ── Empty state ─────────────────────────────────────── */
+.lib-empty {
+  text-align: center; padding: 60px 20px;
+  border: 2px dashed var(--border-color);
+  border-radius: 16px;
+}
+.lib-empty-icons { font-size: 2.5rem; margin-bottom: 14px; }
+.lib-empty-icons span { margin: 0 4px; }
+
+/* ── Divider lines between card sections ─────────────── */
+.pcard-divider {
+  width: 1px; background: var(--border-color); align-self: stretch; margin: 12px 0;
+}
+
+/* ── Responsive ──────────────────────────────────────── */
+@media (max-width: 768px) {
+  .pcard { grid-template-columns: 1fr; }
+  .pcard-meta, .pcard-prog, .pcard-stats { display: none; }
+  .pcard-acts { padding: 0 16px 16px; }
+  .stat-pill .sp-num { font-size: 1rem; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# ── Compute stats ── #}
+{% set total     = projects | length %}
+{% set completed = projects | selectattr('status', 'equalto', 'completed') | list | length %}
+{% set drafts    = projects | selectattr('status', 'equalto', 'draft')     | list | length %}
+{% set active    = projects | rejectattr('status', 'in', ['completed','draft']) | list | length %}
+{% set total_words = projects | sum(attribute='total_words') %}
+
+{# ── Hero ── #}
+<div class="lib-hero">
+  <div class="lib-hero-title"><i class="fas fa-layer-group me-2" style="color:var(--hl-blue)"></i>Project <span>Library</span></div>
+  <div class="stat-pills">
+    <div class="stat-pill sp-blue">
+      <i class="fas fa-books" style="font-size:1.1rem"></i>
+      <div><div class="sp-num">{{ total }}</div><div class="sp-label">Total</div></div>
+    </div>
+    <div class="stat-pill sp-green">
+      <i class="fas fa-check-circle" style="font-size:1.1rem"></i>
+      <div><div class="sp-num">{{ completed }}</div><div class="sp-label">Completed</div></div>
+    </div>
+    <div class="stat-pill sp-lemon">
+      <i class="fas fa-pencil-alt" style="font-size:1.1rem"></i>
+      <div><div class="sp-num">{{ drafts }}</div><div class="sp-label">Drafts</div></div>
+    </div>
+    <div class="stat-pill sp-red">
+      <i class="fas fa-bolt" style="font-size:1.1rem"></i>
+      <div><div class="sp-num">{{ active }}</div><div class="sp-label">Active</div></div>
+    </div>
+    <div class="stat-pill sp-blue" style="margin-left:auto">
+      <i class="fas fa-align-left" style="font-size:1rem"></i>
+      <div><div class="sp-num">{{ '{:,}'.format(total_words) }}</div><div class="sp-label">Total Words</div></div>
     </div>
   </div>
 </div>
+
+{% if projects %}
+
+{# ── Search ── #}
+<div class="lib-search-wrap">
+  <i class="fas fa-search"></i>
+  <input class="lib-search" id="libSearch" type="text" placeholder="Search projects by title or genre…" oninput="filterCards()">
+</div>
+
+<div class="lib-section-label">{{ total }} Project{{ 's' if total != 1 }}</div>
+
+{# ── Cards ── #}
+<div class="project-cards" id="projectCards">
+  {% for p in projects %}
+  {% set pct = (p.current_chapter / p.num_chapters * 100) | int if p.num_chapters else 0 %}
+  {% set sc = 'sc-' + p.status if p.status in ['completed','draft','generating','paused'] else 'sc-default' %}
+  {% set pb = 'pb-' + p.status if p.status in ['completed','draft','generating','paused'] else 'pb-default' %}
+
+  <div class="pcard status-{{ p.status }}" data-title="{{ p.title | lower }}" data-genre="{{ p.genre | lower }}">
+
+    {# Main info #}
+    <div class="pcard-main">
+      <div class="pcard-title">{{ p.title }}</div>
+      {% if p.subtitle %}<div class="pcard-subtitle">{{ p.subtitle }}</div>{% endif %}
+      <div class="genre-chip"><i class="fas fa-tag me-1"></i>{{ p.genre }}</div>
+    </div>
+
+    <div class="pcard-divider"></div>
+
+    {# Status #}
+    <div class="pcard-meta">
+      <span class="status-chip {{ sc }}">
+        {% if p.status == 'completed' %}<i class="fas fa-check-circle"></i>
+        {% elif p.status == 'generating' %}<i class="fas fa-spinner fa-spin"></i>
+        {% elif p.status == 'paused' %}<i class="fas fa-pause-circle"></i>
+        {% else %}<i class="fas fa-edit"></i>{% endif %}
+        {{ p.status | title }}
+      </span>
+      <div class="stat-unit mt-1">{{ p.updated_at[:10] }}</div>
+    </div>
+
+    <div class="pcard-divider"></div>
+
+    {# Progress #}
+    <div class="pcard-prog">
+      <div class="lib-prog-label">Progress</div>
+      <div class="lib-progress">
+        <div class="lib-progress-bar {{ pb }}" style="width:{{ pct }}%"></div>
+      </div>
+      <div class="lib-pct">{{ p.current_chapter }} / {{ p.num_chapters }} chapters &nbsp;·&nbsp; {{ pct }}%</div>
+    </div>
+
+    <div class="pcard-divider"></div>
+
+    {# Word count #}
+    <div class="pcard-stats">
+      <div>
+        <div class="stat-num">{{ '{:,}'.format(p.total_words) }}</div>
+        <div class="stat-unit">words</div>
+      </div>
+    </div>
+
+    <div class="pcard-divider"></div>
+
+    {# Actions #}
+    <div class="pcard-acts">
+      <a href="{{ url_for('projects.project_detail', project_id=p.id) }}" class="act-btn act-green" title="Open project">
+        <i class="fas fa-folder-open"></i>
+      </a>
+      <a href="{{ url_for('editor.editor_page', project_id=p.id) }}" class="act-btn act-blue" title="Open editor">
+        <i class="fas fa-pen-nib"></i>
+      </a>
+      <a href="{{ url_for('exports.export_page', project_id=p.id) }}" class="act-btn act-lemon" title="Export">
+        <i class="fas fa-download"></i>
+      </a>
+      <form method="POST" action="{{ url_for('projects.duplicate_project', project_id=p.id) }}" style="display:inline">
+        <button type="submit" class="act-btn act-neutral" title="Duplicate">
+          <i class="fas fa-copy"></i>
+        </button>
+      </form>
+      <button class="act-btn act-red" onclick="confirmDelete({{ p.id }}, '{{ p.title | e }}')" title="Delete">
+        <i class="fas fa-trash"></i>
+      </button>
+    </div>
+
+  </div>
+  {% endfor %}
+</div>
+
+<div id="noResults" style="display:none" class="lib-empty mt-3">
+  <div class="lib-empty-icons"><span>🔍</span></div>
+  <h5>No projects match your search</h5>
+  <p class="text-muted">Try a different title or genre.</p>
+</div>
+
 {% else %}
-<div class="empty-state">
-  <div class="empty-icon"><i class="fas fa-book"></i></div>
-  <h3>No projects yet</h3>
-  <p>Your project library is empty. Create your first book to get started.</p>
+<div class="lib-empty">
+  <div class="lib-empty-icons">
+    <span style="color:var(--hl-green)">📗</span>
+    <span style="color:var(--hl-blue)">📘</span>
+    <span style="color:var(--hl-lemon2)">📒</span>
+    <span style="color:var(--hl-red)">📕</span>
+  </div>
+  <h4 style="color:var(--text-heading)">Your library is empty</h4>
+  <p class="text-muted mb-4">Create your first project to get started.</p>
   <a href="{{ url_for('projects.new_project') }}" class="btn btn-primary">
     <i class="fas fa-plus me-2"></i>Create First Book
   </a>
 </div>
 {% endif %}
 
-<!-- Delete Confirm Modal -->
+{# ── Delete modal ── #}
 <div class="modal fade" id="deleteModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header border-0">
-        <h5 class="modal-title text-danger"><i class="fas fa-trash me-2"></i>Delete Project</h5>
+        <h5 class="modal-title" style="color:var(--hl-red)"><i class="fas fa-trash me-2"></i>Delete Project</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <p>Are you sure you want to permanently delete <strong id="deleteProjectName"></strong>?</p>
-        <p class="text-muted small">This will delete all chapters, characters, world building, and exports. This cannot be undone.</p>
+        <p>Permanently delete <strong id="deleteProjectName"></strong>?</p>
+        <p class="text-muted small">All chapters, characters, world building, and exports will be removed. This cannot be undone.</p>
       </div>
       <div class="modal-footer border-0">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -117,6 +379,7 @@
     </div>
   </div>
 </div>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -125,6 +388,18 @@ function confirmDelete(id, name) {
   document.getElementById('deleteProjectName').textContent = name;
   document.getElementById('deleteForm').action = `/project/${id}/delete`;
   new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+
+function filterCards() {
+  const q = document.getElementById('libSearch').value.toLowerCase();
+  const cards = document.querySelectorAll('#projectCards .pcard');
+  let visible = 0;
+  cards.forEach(c => {
+    const match = c.dataset.title.includes(q) || c.dataset.genre.includes(q);
+    c.style.display = match ? '' : 'none';
+    if (match) visible++;
+  });
+  document.getElementById('noResults').style.display = visible === 0 ? '' : 'none';
 }
 </script>
 {% endblock %}
