@@ -243,6 +243,90 @@ def restore():
     return redirect(url_for('admin.dashboard'))
 
 
+@bp.route('/reports')
+@admin_required
+def reports():
+    db = get_db()
+    page = int(request.args.get('page', 1))
+    status_filter = request.args.get('status', '')
+    per_page = 25
+    offset = (page - 1) * per_page
+
+    where = "WHERE 1=1"
+    params = []
+    if status_filter:
+        where += " AND cr.status = ?"
+        params.append(status_filter)
+
+    total = db.execute(
+        f'SELECT COUNT(*) FROM content_reports cr {where}', params
+    ).fetchone()[0]
+
+    report_entries = db.execute(
+        f'''SELECT cr.*, p.title as project_title, c.chapter_title, c.chapter_number
+            FROM content_reports cr
+            LEFT JOIN projects p ON cr.project_id = p.id
+            LEFT JOIN chapters c ON cr.chapter_id = c.id
+            {where}
+            ORDER BY cr.id DESC LIMIT ? OFFSET ?''',
+        params + [per_page, offset]
+    ).fetchall()
+
+    pending_count = db.execute(
+        "SELECT COUNT(*) FROM content_reports WHERE status='pending'"
+    ).fetchone()[0]
+
+    return render_template('admin/reports.html',
+                           reports=report_entries, page=page,
+                           per_page=per_page, total=total,
+                           status_filter=status_filter,
+                           pending_count=pending_count)
+
+
+@bp.route('/reports/<int:report_id>/update', methods=['POST'])
+@admin_required
+def update_report(report_id):
+    db = get_db()
+    data = request.get_json(silent=True) or request.form
+    new_status = data.get('status', 'reviewed')
+    if new_status not in ('pending', 'reviewed', 'actioned', 'dismissed'):
+        new_status = 'reviewed'
+    admin_notes = data.get('admin_notes', '')
+    db.execute(
+        '''UPDATE content_reports
+           SET status=?, admin_notes=?, reviewed_at=CURRENT_TIMESTAMP
+           WHERE id=?''',
+        (new_status, admin_notes, report_id)
+    )
+    db.commit()
+    if request.is_json:
+        return jsonify({'success': True})
+    flash('Report updated.', 'success')
+    return redirect(url_for('admin.reports'))
+
+
+@bp.route('/reports/<int:report_id>/delete', methods=['POST'])
+@admin_required
+def delete_report(report_id):
+    db = get_db()
+    db.execute('DELETE FROM content_reports WHERE id=?', (report_id,))
+    db.commit()
+    if request.is_json:
+        return jsonify({'success': True})
+    flash('Report deleted.', 'success')
+    return redirect(url_for('admin.reports'))
+
+
+@bp.route('/reports/clear-dismissed', methods=['POST'])
+@admin_required
+def clear_dismissed_reports():
+    db = get_db()
+    db.execute("DELETE FROM content_reports WHERE status IN ('dismissed', 'actioned')")
+    db.commit()
+    flash('Cleared resolved reports.', 'success')
+    return redirect(url_for('admin.reports'))
+
+
 @bp.route('/test-groq', methods=['POST'])
 @admin_required
 def test_groq():

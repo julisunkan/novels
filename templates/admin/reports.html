@@ -1,0 +1,234 @@
+{% extends "admin/base.html" %}
+{% block title %}Content Reports{% endblock %}
+{% block breadcrumb %}Content Reports{% endblock %}
+
+{% block admin_content %}
+<div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+  <h1 class="page-title">Content Reports</h1>
+  <div class="d-flex gap-2">
+    {% if status_filter %}
+    <a href="{{ url_for('admin.reports') }}" class="btn btn-outline-secondary btn-sm">
+      <i class="fas fa-times me-1"></i>Clear Filter
+    </a>
+    {% endif %}
+    <form method="POST" action="{{ url_for('admin.clear_dismissed_reports') }}"
+          onsubmit="return confirm('Clear all dismissed/actioned reports?')">
+      <button type="submit" class="btn btn-outline-danger btn-sm">
+        <i class="fas fa-broom me-1"></i>Clear Resolved
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- Status filters -->
+<div class="d-flex gap-2 mb-4 flex-wrap">
+  {% for s, label, cls in [
+    ('', 'All Reports', 'secondary'),
+    ('pending', 'Pending', 'warning'),
+    ('reviewed', 'Reviewed', 'info'),
+    ('actioned', 'Actioned', 'success'),
+    ('dismissed', 'Dismissed', 'secondary'),
+  ] %}
+  <a href="{{ url_for('admin.reports', status=s) }}"
+     class="btn btn-sm btn-{{ cls if status_filter == s else 'outline-' + cls }}">
+    {{ label }}{% if s == 'pending' and pending_count %} <span class="badge bg-danger ms-1">{{ pending_count }}</span>{% endif %}
+  </a>
+  {% endfor %}
+</div>
+
+{% if reports %}
+<div class="card">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Content</th>
+            <th>Reason</th>
+            <th>Details</th>
+            <th>Reporter</th>
+            <th>Status</th>
+            <th>Reported</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in reports %}
+          <tr id="report-{{ r.id }}" class="{{ 'table-warning' if r.status == 'pending' else '' }}">
+            <td class="text-muted small">{{ r.id }}</td>
+            <td>
+              {% if r.chapter_id %}
+              <div class="fw-semibold small">
+                <a href="{{ url_for('chapters.chapter_view', project_id=r.project_id, chapter_id=r.chapter_id) }}"
+                   target="_blank" class="text-decoration-none">
+                  Ch.{{ r.chapter_number }}: {{ r.chapter_title[:30] if r.chapter_title else '—' }}
+                </a>
+              </div>
+              <div class="text-muted x-small">{{ r.project_title[:30] if r.project_title else '—' }}</div>
+              {% else %}
+              <span class="text-muted small">—</span>
+              {% endif %}
+            </td>
+            <td>
+              <span class="badge bg-warning text-dark">{{ r.report_reason }}</span>
+            </td>
+            <td class="small" style="max-width:200px">
+              <span title="{{ r.report_details }}">{{ r.report_details[:80] if r.report_details else '—' }}{% if r.report_details and r.report_details|length > 80 %}…{% endif %}</span>
+            </td>
+            <td class="small text-muted">{{ r.reporter_info or 'Anonymous' }}</td>
+            <td>
+              <span class="badge bg-{{ 'warning text-dark' if r.status == 'pending' else ('success' if r.status == 'actioned' else ('info' if r.status == 'reviewed' else 'secondary')) }}">
+                {{ r.status }}
+              </span>
+            </td>
+            <td class="small text-muted text-nowrap">{{ r.created_at[:10] if r.created_at else '—' }}</td>
+            <td>
+              <div class="d-flex gap-1">
+                <button class="btn btn-xs btn-outline-info btn-review"
+                        data-id="{{ r.id }}"
+                        data-notes="{{ r.admin_notes | tojson }}"
+                        data-status="{{ r.status }}" title="Review">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn btn-xs btn-outline-success btn-quick-status"
+                        data-id="{{ r.id }}" data-status="actioned" title="Mark Actioned">
+                  <i class="fas fa-check"></i>
+                </button>
+                <button class="btn btn-xs btn-outline-secondary btn-quick-status"
+                        data-id="{{ r.id }}" data-status="dismissed" title="Dismiss">
+                  <i class="fas fa-ban"></i>
+                </button>
+                <button class="btn btn-xs btn-outline-danger btn-delete-report"
+                        data-id="{{ r.id }}" title="Delete">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Pagination -->
+{% set total_pages = ((total - 1) // per_page + 1) %}
+{% if total_pages > 1 %}
+<nav class="mt-3">
+  <ul class="pagination pagination-sm">
+    {% for p in range(1, total_pages + 1) %}
+    <li class="page-item {{ 'active' if p == page }}">
+      <a class="page-link" href="{{ url_for('admin.reports', page=p, status=status_filter) }}">{{ p }}</a>
+    </li>
+    {% endfor %}
+  </ul>
+</nav>
+{% endif %}
+
+{% else %}
+<div class="text-center py-5 text-muted">
+  <i class="fas fa-flag fa-3x mb-3 opacity-25"></i>
+  <p>No reports found{% if status_filter %} with status "{{ status_filter }}"{% endif %}.</p>
+</div>
+{% endif %}
+
+<!-- Notes / Review Modal -->
+<div class="modal fade" id="notesModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-0">
+        <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Review Report</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Status</label>
+          <select id="notesStatus" class="form-select">
+            <option value="pending">Pending</option>
+            <option value="reviewed">Reviewed</option>
+            <option value="actioned">Actioned</option>
+            <option value="dismissed">Dismissed</option>
+          </select>
+        </div>
+        <div class="mb-1">
+          <label class="form-label fw-semibold">Admin Notes</label>
+          <textarea id="notesText" class="form-control" rows="4" placeholder="Internal notes about this report…"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer border-0">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="btnSaveNotes">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block admin_js %}
+<script>
+let currentReportId = null;
+
+// Wire up review buttons via data-* attributes (safe against quote injection)
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.btn-review').forEach(btn => {
+    btn.addEventListener('click', function() {
+      currentReportId = this.dataset.id;
+      // data-notes is stored as JSON-encoded string (tojson), parse it safely
+      document.getElementById('notesText').value = JSON.parse(this.dataset.notes);
+      document.getElementById('notesStatus').value = this.dataset.status;
+      new bootstrap.Modal(document.getElementById('notesModal')).show();
+    });
+  });
+
+  document.querySelectorAll('.btn-quick-status').forEach(btn => {
+    btn.addEventListener('click', async function() {
+      const id = this.dataset.id;
+      const status = this.dataset.status;
+      const resp = await fetch(`/julisunkan/reports/${id}/update`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ status, admin_notes: '' })
+      });
+      if ((await resp.json()).success) {
+        const row = document.getElementById('report-' + id);
+        if (row) row.style.opacity = '0.4';
+        setTimeout(() => location.reload(), 400);
+      }
+    });
+  });
+
+  document.querySelectorAll('.btn-delete-report').forEach(btn => {
+    btn.addEventListener('click', async function() {
+      if (!confirm('Permanently delete this report?')) return;
+      const id = this.dataset.id;
+      const resp = await fetch(`/julisunkan/reports/${id}/delete`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+      });
+      if ((await resp.json()).success) {
+        const row = document.getElementById('report-' + id);
+        if (row) row.remove();
+      }
+    });
+  });
+});
+
+document.getElementById('btnSaveNotes').addEventListener('click', async function() {
+  if (!currentReportId) return;
+  const resp = await fetch(`/julisunkan/reports/${currentReportId}/update`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      status: document.getElementById('notesStatus').value,
+      admin_notes: document.getElementById('notesText').value,
+    })
+  });
+  if ((await resp.json()).success) {
+    bootstrap.Modal.getInstance(document.getElementById('notesModal')).hide();
+    location.reload();
+  }
+});
+</script>
+{% endblock %}

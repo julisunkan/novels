@@ -1,5 +1,5 @@
 """Main routes: home, project history, search & replace."""
-from flask import Blueprint, render_template, request, redirect, url_for, jsonify, session
+from flask import Blueprint, render_template, request, redirect, url_for, jsonify, session, send_from_directory, make_response, current_app
 from database import get_db
 from utils.helpers import get_setting, count_words
 
@@ -47,6 +47,33 @@ def generate_titles_preview():
     data = request.get_json(silent=True) or {}  # optional body, no required fields
     try:
         result, tokens, elapsed = generate_titles(api_key, model, data, temperature=0.9)
+        return jsonify({'success': True, 'data': result})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@bp.route('/sw.js')
+def service_worker():
+    """Serve the service worker from root scope so it controls all app pages."""
+    resp = make_response(send_from_directory('static', 'sw.js'))
+    resp.headers['Service-Worker-Allowed'] = '/'
+    resp.headers['Content-Type'] = 'application/javascript'
+    resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    return resp
+
+
+@bp.route('/api/generate-premise-preview', methods=['POST'])
+def generate_premise_preview():
+    """Generate subtitle and description for a new/existing project (no saved project needed)."""
+    db = get_db()
+    from services.groq_service import generate_book_premise
+    api_key = get_setting(db, 'groq_api_key')
+    if not api_key:
+        return jsonify({'error': 'Groq API key not configured. Visit /julisunkan to set it up.'}), 400
+    model = get_setting(db, 'groq_model', 'llama-3.3-70b-versatile')
+    data = request.get_json(silent=True) or {}
+    try:
+        result, tokens, elapsed = generate_book_premise(api_key, model, data)
         return jsonify({'success': True, 'data': result})
     except Exception as e:
         return jsonify({'error': str(e)}), 500

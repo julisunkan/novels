@@ -21,12 +21,17 @@
             <input type="text" name="title" class="form-control" value="{{ project.title }}" required>
           </div>
           <div class="mb-3">
-            <label class="form-label">Subtitle</label>
-            <input type="text" name="subtitle" class="form-control" value="{{ project.subtitle }}">
+            <label class="form-label d-flex justify-content-between align-items-center">
+              <span>Subtitle</span>
+              <button type="button" class="btn btn-outline-success btn-xs" id="btnGenPremise" title="Generate subtitle & description with AI">
+                <i class="fas fa-wand-magic-sparkles me-1"></i>AI Generate
+              </button>
+            </label>
+            <input type="text" name="subtitle" id="subtitleInput" class="form-control" value="{{ project.subtitle }}">
           </div>
           <div class="mb-3">
             <label class="form-label">Description</label>
-            <textarea name="description" class="form-control" rows="4">{{ project.description }}</textarea>
+            <textarea name="description" id="descriptionInput" class="form-control" rows="4">{{ project.description }}</textarea>
           </div>
           <div class="row g-3">
             {% set selects = [
@@ -113,4 +118,96 @@
     </div>
   </div>
 </form>
+
+<!-- AI Premise Modal -->
+<div class="modal fade" id="premiseModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-0">
+        <h5 class="modal-title"><i class="fas fa-wand-magic-sparkles me-2 text-success"></i>AI Subtitle & Description</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="premiseLoading" class="text-center py-4">
+          <div class="spinner-border text-success mb-3"></div>
+          <p>Generating subtitle and premise…</p>
+        </div>
+        <div id="premiseContent" style="display:none">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Suggested Subtitle</label>
+            <div id="premiseSubtitle" class="alert alert-secondary py-2 mb-1" style="cursor:pointer" title="Click to use this subtitle"></div>
+            <small class="text-muted"><i class="fas fa-hand-pointer me-1"></i>Click to apply to form</small>
+          </div>
+          <div class="mb-2">
+            <label class="form-label fw-semibold">Generated Description / Premise</label>
+            <div id="premiseDescription" class="alert alert-secondary py-2 mb-1" style="cursor:pointer" title="Click to use this description"></div>
+            <small class="text-muted"><i class="fas fa-hand-pointer me-1"></i>Click to apply to form</small>
+          </div>
+          <div class="d-flex gap-2 mt-3">
+            <button type="button" class="btn btn-success btn-sm" id="btnApplyBoth">
+              <i class="fas fa-check me-1"></i>Apply Both
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="btnRegenPremise">
+              <i class="fas fa-redo me-1"></i>Regenerate
+            </button>
+          </div>
+        </div>
+        <div id="premiseError" class="alert alert-danger" style="display:none"></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function fetchPremise() {
+  document.getElementById('premiseLoading').style.display = 'block';
+  document.getElementById('premiseContent').style.display = 'none';
+  document.getElementById('premiseError').style.display = 'none';
+  try {
+    const resp = await fetch('/api/generate-premise-preview', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        title: document.querySelector('[name=title]').value || '{{ project.title | e }}',
+        genre: document.querySelector('[name=genre]').value || '{{ project.genre }}',
+        tone: document.querySelector('[name=tone]').value || '{{ project.tone }}',
+        audience: document.querySelector('[name=audience]').value || '{{ project.audience }}',
+        story_type: document.querySelector('[name=story_type]').value || '{{ project.story_type }}',
+        writing_style: document.querySelector('[name=writing_style]').value || '{{ project.writing_style }}',
+        description: document.getElementById('descriptionInput').value,
+      })
+    });
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error);
+    document.getElementById('premiseLoading').style.display = 'none';
+    document.getElementById('premiseContent').style.display = 'block';
+    document.getElementById('premiseSubtitle').textContent = data.data.subtitle || '';
+    document.getElementById('premiseDescription').textContent = data.data.description || '';
+  } catch(e) {
+    document.getElementById('premiseLoading').style.display = 'none';
+    document.getElementById('premiseError').style.display = 'block';
+    document.getElementById('premiseError').textContent = e.message;
+  }
+}
+document.getElementById('btnGenPremise').addEventListener('click', function() {
+  new bootstrap.Modal(document.getElementById('premiseModal')).show();
+  fetchPremise();
+});
+document.getElementById('premiseSubtitle').addEventListener('click', function() {
+  document.getElementById('subtitleInput').value = this.textContent;
+  bootstrap.Modal.getInstance(document.getElementById('premiseModal')).hide();
+});
+document.getElementById('premiseDescription').addEventListener('click', function() {
+  document.getElementById('descriptionInput').value = this.textContent;
+  bootstrap.Modal.getInstance(document.getElementById('premiseModal')).hide();
+});
+document.getElementById('btnApplyBoth').addEventListener('click', function() {
+  document.getElementById('subtitleInput').value = document.getElementById('premiseSubtitle').textContent;
+  document.getElementById('descriptionInput').value = document.getElementById('premiseDescription').textContent;
+  bootstrap.Modal.getInstance(document.getElementById('premiseModal')).hide();
+});
+document.getElementById('btnRegenPremise').addEventListener('click', fetchPremise);
+</script>
 {% endblock %}

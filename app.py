@@ -32,6 +32,7 @@ def create_app():
     from routes.export_routes import bp as exports_bp
     from routes.chapters import bp as chapters_bp
     from routes.admin import bp as admin_bp
+    from routes.reports import bp as reports_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(projects_bp)
@@ -43,6 +44,7 @@ def create_app():
     app.register_blueprint(exports_bp)
     app.register_blueprint(chapters_bp)
     app.register_blueprint(admin_bp)
+    app.register_blueprint(reports_bp)
 
     # Context processor: inject app-wide settings
     @app.context_processor

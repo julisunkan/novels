@@ -216,6 +216,42 @@ Be thorough and authentic. Output only the content itself, no extra commentary."
     return content, tokens, elapsed
 
 
+def generate_book_premise(api_key, model, project_info, temperature=0.85):
+    """Generate subtitle and book description/premise from basic book details."""
+    system = (
+        "You are a creative book editor and marketing specialist. "
+        "Generate compelling subtitles and vivid book descriptions that hook readers."
+    )
+    user = f"""Generate a subtitle and a book description/premise for this book concept.
+
+Book Details:
+Title: {project_info.get('title', '')}
+Genre: {project_info.get('genre', 'Fantasy')}
+Story Type: {project_info.get('story_type', 'Novel')}
+Tone: {project_info.get('tone', 'Adventurous')}
+Audience: {project_info.get('audience', 'Adult')}
+Writing Style: {project_info.get('writing_style', 'Descriptive')}
+Existing Description (if any): {project_info.get('description', '')}
+
+Respond ONLY with valid JSON:
+{{
+  "subtitle": "A compelling subtitle (max 10 words)",
+  "description": "A gripping 3-4 sentence book premise that hooks the reader, reveals the central conflict, and teases the stakes. Written in present tense marketing style."
+}}"""
+    messages = [
+        {'role': 'system', 'content': system},
+        {'role': 'user', 'content': user}
+    ]
+    content, tokens, elapsed = call_groq(api_key, model, messages, temperature, 0.9, 512)
+    start = content.find('{')
+    end = content.rfind('}') + 1
+    if start >= 0 and end > start:
+        data = json.loads(content[start:end])
+    else:
+        data = {'subtitle': '', 'description': content.strip()}
+    return data, tokens, elapsed
+
+
 def generate_cover_prompt(api_key, model, project):
     """Generate a detailed AI image prompt for the book cover."""
     system = 'You are an expert AI art prompt engineer specializing in book covers.'

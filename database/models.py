@@ -178,6 +178,21 @@ CREATE TABLE IF NOT EXISTS statistics (
     tokens_used INTEGER DEFAULT 0,
     avg_generation_time REAL DEFAULT 0
 );
+
+CREATE TABLE IF NOT EXISTS content_reports (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER,
+    chapter_id INTEGER,
+    content_type TEXT DEFAULT 'chapter',
+    report_reason TEXT NOT NULL,
+    report_details TEXT DEFAULT '',
+    reporter_info TEXT DEFAULT '',
+    status TEXT DEFAULT 'pending',
+    admin_notes TEXT DEFAULT '',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    reviewed_at TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL
+);
 """
 
 DEFAULT_SETTINGS = [
