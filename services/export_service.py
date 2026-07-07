@@ -187,7 +187,7 @@ def export_pdf(db, project_id, options=None):
         topMargin=1 * inch,
         bottomMargin=1 * inch,
         title=title,
-        author='KDP Novels & Storybook Creator',
+        author='KDP Novel & Storybook Creator',
     )
 
     styles = getSampleStyleSheet()

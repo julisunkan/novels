@@ -19,5 +19,5 @@ class Config:
     ADMIN_PASSWORD_DEFAULT = 'admin123'
 
     # App info
-    APP_NAME = 'KDP Novels & Storybook Creator'
+    APP_NAME = 'KDP Novel & Storybook Creator'
     APP_VERSION = '1.0.0'

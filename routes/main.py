@@ -18,7 +18,7 @@ def index():
         'completed': db.execute("SELECT COUNT(*) FROM projects WHERE status='completed'").fetchone()[0],
         'in_progress': db.execute("SELECT COUNT(*) FROM projects WHERE status IN ('in_progress','paused')").fetchone()[0],
     }
-    app_name = get_setting(db, 'app_name', 'KDP Novels & Storybook Creator')
+    app_name = get_setting(db, 'app_name', 'KDP Novel & Storybook Creator')
     maintenance = get_setting(db, 'maintenance_mode', '0') == '1'
     return render_template('index.html',
                            projects=projects,
