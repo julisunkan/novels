@@ -10,7 +10,7 @@ class Config:
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max upload
 
     # Groq defaults (overridden by DB settings)
-    GROQ_MODEL = 'llama3-70b-8192'
+    GROQ_MODEL = 'llama-3.3-70b-versatile'
     GROQ_TEMPERATURE = 0.7
     GROQ_TOP_P = 0.9
     GROQ_MAX_TOKENS = 4096

@@ -97,12 +97,11 @@ def settings():
         current_settings[row['key']] = row['value']
 
     groq_models = [
-        ('llama3-70b-8192', 'LLaMA 3 70B (Recommended)'),
-        ('llama3-8b-8192', 'LLaMA 3 8B (Fast)'),
+        ('llama-3.3-70b-versatile', 'LLaMA 3.3 70B Versatile (Recommended)'),
         ('llama-3.1-70b-versatile', 'LLaMA 3.1 70B Versatile'),
-        ('llama-3.1-8b-instant', 'LLaMA 3.1 8B Instant'),
-        ('mixtral-8x7b-32768', 'Mixtral 8x7B'),
-        ('gemma-7b-it', 'Gemma 7B'),
+        ('llama-3.1-8b-instant', 'LLaMA 3.1 8B Instant (Fast)'),
+        ('llama3-groq-70b-8192-tool-use-preview', 'LLaMA 3 Groq 70B Tool Use'),
+        ('gemma2-9b-it', 'Gemma 2 9B'),
     ]
     return render_template('admin/settings.html', s=current_settings, groq_models=groq_models)
 
@@ -250,7 +249,7 @@ def test_groq():
     """Test the Groq API connection."""
     db = get_db()
     api_key = get_setting(db, 'groq_api_key')
-    model = get_setting(db, 'groq_model', 'llama3-70b-8192')
+    model = get_setting(db, 'groq_model', 'llama-3.3-70b-versatile')
     if not api_key:
         return jsonify({'error': 'No API key configured.'}), 400
     from services.groq_service import call_groq

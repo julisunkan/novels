@@ -43,7 +43,7 @@ def generate_titles_preview():
     api_key = get_setting(db, 'groq_api_key')
     if not api_key:
         return jsonify({'error': 'Groq API key not configured. Visit /julisunkan to set it up.'}), 400
-    model = get_setting(db, 'groq_model', 'llama3-70b-8192')
+    model = get_setting(db, 'groq_model', 'llama-3.3-70b-versatile')
     data = request.get_json(silent=True) or {}  # optional body, no required fields
     try:
         result, tokens, elapsed = generate_titles(api_key, model, data, temperature=0.9)

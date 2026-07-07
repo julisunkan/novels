@@ -183,7 +183,7 @@ CREATE TABLE IF NOT EXISTS statistics (
 DEFAULT_SETTINGS = [
     ('admin_password', generate_password_hash('admin123')),
     ('groq_api_key', ''),
-    ('groq_model', 'llama3-70b-8192'),
+    ('groq_model', 'llama-3.3-70b-versatile'),
     ('groq_temperature', '0.7'),
     ('groq_top_p', '0.9'),
     ('groq_max_tokens', '4096'),

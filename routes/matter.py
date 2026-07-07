@@ -63,7 +63,7 @@ def generate_matter_ajax(project_id):
     matter_type = data.get('type', '')
     table = 'front_matter' if matter_type in [t[0] for t in FRONT_MATTER_TYPES] else 'back_matter'
 
-    model = get_setting(db, 'groq_model', 'llama3-70b-8192')
+    model = get_setting(db, 'groq_model', 'llama-3.3-70b-versatile')
     chars_ctx, world_ctx, _ = build_full_prompt_context(db, project_id)
     try:
         content, tokens, elapsed = generate_matter(

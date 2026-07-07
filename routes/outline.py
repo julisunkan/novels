@@ -32,7 +32,7 @@ def generate_outline_ajax(project_id):
     api_key = get_setting(db, 'groq_api_key')
     if not api_key:
         return jsonify({'error': 'Groq API key not configured. Visit /julisunkan to set it up.'}), 400
-    model = get_setting(db, 'groq_model', 'llama3-70b-8192')
+    model = get_setting(db, 'groq_model', 'llama-3.3-70b-versatile')
 
     # Get genre template
     template = db.execute(

@@ -432,7 +432,7 @@ def regenerate_chapter(project_id, chapter_id):
     else:
         outline_ch = dict(outline_ch)
 
-    model = get_setting(db, 'groq_model', 'llama3-70b-8192')
+    model = get_setting(db, 'groq_model', 'llama-3.3-70b-versatile')
     template = _get_template(db, project['genre'])
     chars_ctx, world_ctx, memory_ctx = build_full_prompt_context(
         db, project_id, chapter_number=chapter['chapter_number']

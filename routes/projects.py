@@ -19,12 +19,11 @@ LANGUAGES = ['English', 'Spanish', 'French', 'German', 'Italian', 'Portuguese', 
 IMAGE_STYLES = ['Realistic', 'Fantasy Art', 'Watercolor', 'Oil Painting', 'Anime', 'Comic Book', 'Pencil Sketch']
 CREATIVITY = [('conservative', 'Conservative'), ('balanced', 'Balanced'), ('creative', 'Creative'), ('wild', 'Wild')]
 GROQ_MODELS = [
-    ('llama3-70b-8192', 'LLaMA 3 70B (Recommended)'),
-    ('llama3-8b-8192', 'LLaMA 3 8B (Fast)'),
+    ('llama-3.3-70b-versatile', 'LLaMA 3.3 70B Versatile (Recommended)'),
     ('llama-3.1-70b-versatile', 'LLaMA 3.1 70B Versatile'),
-    ('llama-3.1-8b-instant', 'LLaMA 3.1 8B Instant'),
-    ('mixtral-8x7b-32768', 'Mixtral 8x7B'),
-    ('gemma-7b-it', 'Gemma 7B'),
+    ('llama-3.1-8b-instant', 'LLaMA 3.1 8B Instant (Fast)'),
+    ('llama3-groq-70b-8192-tool-use-preview', 'LLaMA 3 Groq 70B Tool Use'),
+    ('gemma2-9b-it', 'Gemma 2 9B'),
 ]
 
 
@@ -203,7 +202,7 @@ def ajax_generate_titles(project_id):
     api_key = get_setting(db, 'groq_api_key')
     if not api_key:
         return jsonify({'error': 'Groq API key not configured. Visit Admin Settings.'}), 400
-    model = get_setting(db, 'groq_model', 'llama3-70b-8192')
+    model = get_setting(db, 'groq_model', 'llama-3.3-70b-versatile')
     try:
         data, tokens, elapsed = generate_titles(api_key, model, dict(project))
         return jsonify({'success': True, 'data': data, 'tokens': tokens})
@@ -220,7 +219,7 @@ def ajax_generate_cover_prompt(project_id):
     api_key = get_setting(db, 'groq_api_key')
     if not api_key:
         return jsonify({'error': 'Groq API key not configured.'}), 400
-    model = get_setting(db, 'groq_model', 'llama3-70b-8192')
+    model = get_setting(db, 'groq_model', 'llama-3.3-70b-versatile')
     from services.groq_service import generate_cover_prompt
     try:
         prompt, tokens, _ = generate_cover_prompt(api_key, model, dict(project))
