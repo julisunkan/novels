@@ -216,16 +216,34 @@ def _generation_worker(app, project_id):
                 )
                 db.commit()
 
-            # All chapters done
-            db.execute(
-                "UPDATE projects SET status='completed', updated_at=CURRENT_TIMESTAMP WHERE id=?",
+            # All chapters done — only mark completed if none are still pending/failed
+            pending_count = db.execute(
+                "SELECT COUNT(*) FROM chapters WHERE project_id=? AND status != 'generated'",
                 (project_id,)
-            )
-            db.execute(
-                'INSERT INTO statistics (date, books_generated) VALUES (?,1) '
-                'ON CONFLICT(date) DO UPDATE SET books_generated=books_generated+1',
-                (time.strftime('%Y-%m-%d'),)
-            )
+            ).fetchone()[0]
+
+            if pending_count == 0:
+                # Only increment books_generated when transitioning to completed
+                was_completed = db.execute(
+                    "SELECT status FROM projects WHERE id=?", (project_id,)
+                ).fetchone()['status'] == 'completed'
+
+                db.execute(
+                    "UPDATE projects SET status='completed', updated_at=CURRENT_TIMESTAMP WHERE id=?",
+                    (project_id,)
+                )
+                if not was_completed:
+                    db.execute(
+                        'INSERT INTO statistics (date, books_generated) VALUES (?,1) '
+                        'ON CONFLICT(date) DO UPDATE SET books_generated=books_generated+1',
+                        (time.strftime('%Y-%m-%d'),)
+                    )
+            else:
+                # Some chapters failed — leave as paused so user can retry
+                db.execute(
+                    "UPDATE projects SET status='paused', updated_at=CURRENT_TIMESTAMP WHERE id=?",
+                    (project_id,)
+                )
             db.commit()
 
         except Exception as e:
