@@ -13,10 +13,12 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
-function loadChapter(id, num, title, content) {
-  // Autosave current chapter before switching
+async function loadChapter(id, num, title, content) {
+  // Autosave current chapter BEFORE switching — capture IDs now, before they change
   if (isDirty && currentChapterId) {
-    saveCurrentChapter(true);
+    const savingId = currentChapterId;
+    isDirty = false; // prevent re-entry
+    await saveCurrentChapter(true, savingId);
   }
 
   currentChapterId = id;
@@ -61,32 +63,38 @@ function updateCounts(text) {
   if (ccEl) ccEl.textContent = chars.toLocaleString() + ' chars';
 }
 
-async function saveCurrentChapter(silent = false) {
-  if (!currentChapterId) return;
+// chapterId defaults to currentChapterId; pass an explicit id when calling across a chapter switch
+async function saveCurrentChapter(silent = false, chapterId = null) {
+  const targetId = chapterId || currentChapterId;
+  if (!targetId) return;
   const textarea = document.getElementById('editorArea');
   const projectId = document.getElementById('currentProjectId')?.value;
   if (!textarea || !projectId) return;
 
   const content = textarea.value;
   try {
-    const resp = await fetch(`/project/${projectId}/editor/chapter/${currentChapterId}/save`, {
+    const resp = await fetch(`/project/${projectId}/editor/chapter/${targetId}/save`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ content })
     });
     const data = await resp.json();
     if (data.success) {
-      isDirty = false;
-      setAutosaveIndicator('All changes saved');
-      // Update word count in sidebar
-      const chBtn = document.getElementById(`chbtn-${currentChapterId}`);
+      // Only reset dirty flag if we saved the chapter still displayed
+      if (targetId === currentChapterId) {
+        isDirty = false;
+        setAutosaveIndicator('All changes saved');
+      }
+      // Update word count in sidebar for the saved chapter
+      const chBtn = document.getElementById(`chbtn-${targetId}`);
       if (chBtn) {
         const wcEl = chBtn.querySelector('.ec-words');
         if (wcEl) wcEl.textContent = data.word_count.toLocaleString() + ' words';
       }
-      // Update total
       updateTotalWordCount(projectId);
       if (!silent) showToast('Chapter saved!', 'success');
+    } else if (data.error && !silent) {
+      showToast('Save failed: ' + data.error, 'error');
     }
   } catch(e) {
     if (!silent) showToast('Save failed: ' + e.message, 'error');

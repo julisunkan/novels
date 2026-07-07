@@ -26,7 +26,22 @@ def editor_page(project_id):
 def save_chapter_content(project_id, chapter_id):
     db = get_db()
     data = request.get_json() if request.is_json else request.form
-    content = data.get('content', '')
+    content = data.get('content')
+
+    # Guard: reject saves where content key is entirely missing (not just empty)
+    if content is None:
+        return jsonify({'error': 'No content field provided'}), 400
+
+    # Guard: refuse to overwrite existing content with blank string
+    # (empty string is only allowed if the chapter is already empty)
+    if content.strip() == '':
+        existing = db.execute(
+            'SELECT word_count FROM chapters WHERE id=? AND project_id=?',
+            (chapter_id, project_id)
+        ).fetchone()
+        if existing and existing['word_count'] > 0:
+            return jsonify({'error': 'Refusing to overwrite non-empty chapter with blank content'}), 400
+
     wc = count_words(content)
     db.execute(
         'UPDATE chapters SET content=?, word_count=?, updated_at=CURRENT_TIMESTAMP WHERE id=? AND project_id=?',

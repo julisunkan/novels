@@ -1,0 +1,5 @@
+- [Color theme palette](color-theme.md) — Green/red/blue/amber/brown earthy scheme; dark uses warm brown bg not black; sidebar always deep forest green.
+- [Theme FOUC fix](theme-fouc.md) — Inline <script> in <head> sets data-theme from localStorage before any CSS loads; avoids Bootstrap white-flash.
+- [Editor autosave race](editor-autosave.md) — loadChapter is async; saves with captured chapter ID before switching to prevent dirty-flag clobber across chapter switch.
+- [Save blank-overwrite guard](save-guard.md) — save_chapter_content rejects blank content when existing word_count > 0 to prevent accidental chapter clearing.
+- [Generation button wiring](generation-button.md) — btnStart has NO inline onclick; single click path via JS DOMContentLoaded listener that routes start vs resume based on dataset.status.
