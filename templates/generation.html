@@ -144,7 +144,14 @@
             {% elif gen_ch and gen_ch.status == 'generating' %}
             <span class="text-primary"><i class="fas fa-spinner fa-spin"></i> Generating…</span>
             {% else %}
-            <span class="text-muted"><i class="fas fa-clock"></i> Pending</span>
+            <span class="text-muted chapter-pending-label"><i class="fas fa-clock"></i> Pending</span>
+            {% if groq_configured %}
+            <button class="btn btn-xs btn-outline-success ms-2 btn-generate-chapter"
+                    onclick="generateSingleChapter({{ ch.chapter_number }})"
+                    data-chapter-number="{{ ch.chapter_number }}">
+              <i class="fas fa-magic me-1"></i>Generate
+            </button>
+            {% endif %}
             {% endif %}
           </div>
         </div>

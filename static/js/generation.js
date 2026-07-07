@@ -176,6 +176,10 @@ function updateButtonStates(status) {
 
   const setDisabled = (btn, val) => { if (btn) btn.disabled = val; };
 
+  // Enable/disable per-chapter generate buttons based on bulk state
+  const isBulkActive = (status === 'generating' || status === 'pausing');
+  document.querySelectorAll('.btn-generate-chapter').forEach(b => { b.disabled = isBulkActive; });
+
   if (status === 'generating') {
     setDisabled(btnStart, true);
     setDisabled(btnPause, false);
@@ -202,6 +206,57 @@ function updateButtonStates(status) {
     setDisabled(btnPause, true);
     setDisabled(btnStop, true);
     btnStart.innerHTML = '<i class="fas fa-play me-2"></i>Start Generation';
+  }
+}
+
+async function generateSingleChapter(chapterNumber) {
+  const projectId = getProjectId();
+  const el = document.getElementById(`ch-${chapterNumber}`);
+  const btn = el ? el.querySelector('.btn-generate-chapter') : null;
+  const label = el ? el.querySelector('.chapter-pending-label') : null;
+
+  // Optimistic UI: show spinner immediately
+  if (el) {
+    el.className = el.className.replace(/status-\w+/, '') + ' status-generating';
+  }
+  if (btn) btn.disabled = true;
+  if (label) label.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating…';
+
+  try {
+    const resp = await fetch(`/project/${projectId}/generate/chapter/${chapterNumber}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    const data = await resp.json();
+
+    if (data.error) {
+      showToast(data.error, 'error');
+      // Revert to pending
+      if (el) el.className = el.className.replace(/status-\w+/, '') + ' status-pending';
+      if (label) label.innerHTML = '<i class="fas fa-clock"></i> Pending';
+      if (btn) btn.disabled = false;
+      return;
+    }
+
+    // Success: update to generated state
+    if (el) {
+      el.className = el.className.replace(/status-\w+/, '') + ' status-generated';
+      const cpStatus = el.querySelector('.cp-status');
+      if (cpStatus) {
+        cpStatus.innerHTML = `<span class="text-success"><i class="fas fa-check"></i> ${data.word_count.toLocaleString()} words</span>`;
+      }
+      const cpNum = el.querySelector('.cp-num');
+      if (cpNum) cpNum.style.background = 'rgba(16,185,129,0.2)';
+    }
+    showToast(`Chapter ${chapterNumber} generated!`, 'success');
+
+    // Refresh overall progress stats
+    fetchProgress(projectId);
+  } catch (e) {
+    showToast('Generation failed: ' + e.message, 'error');
+    if (el) el.className = el.className.replace(/status-\w+/, '') + ' status-pending';
+    if (label) label.innerHTML = '<i class="fas fa-clock"></i> Pending';
+    if (btn) btn.disabled = false;
   }
 }
 

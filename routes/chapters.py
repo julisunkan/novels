@@ -14,6 +14,10 @@ bp = Blueprint('chapters', __name__)
 _gen_state = {}
 _gen_lock = threading.Lock()
 
+# Per-chapter single-generation in-progress guard: set of (project_id, chapter_number)
+_single_gen_active = set()
+_single_gen_lock = threading.Lock()
+
 
 def _get_template(db, genre):
     t = db.execute('SELECT * FROM prompt_templates WHERE genre=? LIMIT 1', (genre,)).fetchone()
@@ -404,6 +408,105 @@ def chapter_view(project_id, chapter_id):
         return redirect(url_for('main.history'))
     images = db.execute('SELECT * FROM images WHERE chapter_id=?', (chapter_id,)).fetchall()
     return render_template('chapter_view.html', project=project, chapter=chapter, images=images)
+
+
+@bp.route('/project/<int:project_id>/generate/chapter/<int:chapter_number>', methods=['POST'])
+def generate_single_chapter(project_id, chapter_number):
+    """Generate (or regenerate) a single chapter by outline chapter number."""
+    # Guard against concurrent double-clicks for the same chapter
+    key = (project_id, chapter_number)
+    with _single_gen_lock:
+        if key in _single_gen_active:
+            return jsonify({'error': 'This chapter is already being generated.'}), 409
+        _single_gen_active.add(key)
+
+    try:
+        db = get_db()
+        project = db.execute('SELECT * FROM projects WHERE id=?', (project_id,)).fetchone()
+        if not project:
+            return jsonify({'error': 'Project not found'}), 404
+
+        # Block if a bulk generation thread is already running for this project
+        with _gen_lock:
+            state = _gen_state.get(project_id, {})
+        if state.get('thread') and state['thread'].is_alive():
+            return jsonify({'error': 'Bulk generation is already running. Stop it first.'}), 409
+
+        outline_ch = db.execute(
+            'SELECT * FROM outline WHERE project_id=? AND chapter_number=?',
+            (project_id, chapter_number)
+        ).fetchone()
+        if not outline_ch:
+            return jsonify({'error': 'Chapter not found in outline'}), 404
+
+        api_key = get_setting(db, 'groq_api_key')
+        if not api_key:
+            return jsonify({'error': 'Groq API key not configured.'}), 400
+
+        model = get_setting(db, 'groq_model', 'llama-3.3-70b-versatile')
+        template = _get_template(db, project['genre'])
+        outline_ch = dict(outline_ch)
+
+        # Upsert a chapters row so we can track status
+        existing = db.execute(
+            'SELECT id FROM chapters WHERE project_id=? AND chapter_number=?',
+            (project_id, chapter_number)
+        ).fetchone()
+        if existing:
+            chapter_id = existing['id']
+            db.execute(
+                "UPDATE chapters SET status='generating', updated_at=CURRENT_TIMESTAMP WHERE id=?",
+                (chapter_id,)
+            )
+        else:
+            chapter_id = db.execute(
+                "INSERT INTO chapters (project_id, chapter_number, chapter_title, status) VALUES (?,?,?,?)",
+                (project_id, chapter_number, outline_ch['chapter_title'], 'generating')
+            ).lastrowid
+        db.commit()
+
+        chars_ctx, world_ctx, memory_ctx = build_full_prompt_context(
+            db, project_id, chapter_number=chapter_number
+        )
+
+        # --- Content generation (critical) ---
+        try:
+            content, tokens, elapsed = generate_chapter(
+                api_key, model, dict(project), outline_ch,
+                chars_ctx, world_ctx, memory_ctx, template,
+                project['temperature'], project['top_p'], project['max_tokens']
+            )
+        except Exception as e:
+            db.execute(
+                "UPDATE chapters SET status='pending', updated_at=CURRENT_TIMESTAMP WHERE id=?",
+                (chapter_id,)
+            )
+            db.commit()
+            current_app.logger.error('Single-chapter generation failed (ch %s): %s', chapter_number, e)
+            return jsonify({'error': 'Generation failed. Please try again.'}), 500
+
+        wc = count_words(content)
+        db.execute(
+            "UPDATE chapters SET chapter_title=?, content=?, word_count=?, status='generated', updated_at=CURRENT_TIMESTAMP WHERE id=?",
+            (outline_ch['chapter_title'], content, wc, chapter_id)
+        )
+        db.commit()
+
+        # --- Memory generation (non-critical: failure keeps chapter as generated) ---
+        try:
+            memory_data, _, _ = generate_chapter_memory(
+                api_key, model, outline_ch['chapter_title'], content, project['genre']
+            )
+            save_chapter_memory(db, chapter_id, memory_data)
+        except Exception as e:
+            current_app.logger.warning('Chapter memory generation failed (ch %s): %s', chapter_number, e)
+
+        update_project_stats(db, project_id)
+        return jsonify({'success': True, 'word_count': wc, 'chapter_id': chapter_id})
+
+    finally:
+        with _single_gen_lock:
+            _single_gen_active.discard(key)
 
 
 @bp.route('/project/<int:project_id>/chapter/<int:chapter_id>/regenerate', methods=['POST'])
