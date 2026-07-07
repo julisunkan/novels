@@ -93,6 +93,7 @@
     </div>
     <input type="hidden" id="currentChapterId" value="{{ chapters[0].id if chapters else '' }}">
     <input type="hidden" id="currentProjectId" value="{{ project.id }}">
+    <input type="hidden" id="activeChapterId" value="{{ active_chapter_id or '' }}">
     {% else %}
     <div class="empty-state">
       <div class="empty-icon"><i class="fas fa-pen-fancy"></i></div>

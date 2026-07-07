@@ -18,8 +18,17 @@ def editor_page(project_id):
     ).fetchall()
     total_words = sum(c['word_count'] for c in chapters)
     target_words = project['num_chapters'] * project['words_per_chapter']
+    # Optional ?chapter=<id> to jump directly to a specific chapter
+    try:
+        active_chapter_id = int(request.args.get('chapter', 0)) or None
+    except (ValueError, TypeError):
+        active_chapter_id = None
+    # Validate it belongs to this project
+    if active_chapter_id and not any(c['id'] == active_chapter_id for c in chapters):
+        active_chapter_id = None
     return render_template('editor.html', project=project, chapters=chapters,
-                           total_words=total_words, target_words=target_words)
+                           total_words=total_words, target_words=target_words,
+                           active_chapter_id=active_chapter_id)
 
 
 @bp.route('/project/<int:project_id>/editor/chapter/<int:chapter_id>/save', methods=['POST'])

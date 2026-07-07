@@ -11,6 +11,13 @@ document.addEventListener('DOMContentLoaded', function() {
     currentChapterId = chapterId.value;
     updateCounts(textarea.value);
   }
+
+  // If a specific chapter was requested via ?chapter=, jump to it automatically
+  const activeId = document.getElementById('activeChapterId')?.value;
+  if (activeId && activeId !== currentChapterId) {
+    const btn = document.getElementById(`chbtn-${activeId}`);
+    if (btn) btn.click();
+  }
 });
 
 async function loadChapter(id, num, title) {

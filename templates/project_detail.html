@@ -136,9 +136,14 @@
       </div>
     </div>
     {% if ch.status == 'generated' %}
-    <a href="{{ url_for('chapters.chapter_view', project_id=project.id, chapter_id=ch.id) }}" class="btn btn-sm btn-outline-primary ms-auto">
-      Read
-    </a>
+    <div class="d-flex gap-2 ms-auto">
+      <a href="{{ url_for('chapters.chapter_view', project_id=project.id, chapter_id=ch.id) }}" class="btn btn-sm btn-outline-primary">
+        Read
+      </a>
+      <a href="{{ url_for('editor.editor_page', project_id=project.id) }}?chapter={{ ch.id }}" class="btn btn-sm btn-outline-secondary" title="Edit in Editor">
+        <i class="fas fa-pen"></i>
+      </a>
+    </div>
     {% elif ch.status == 'generating' %}
     <span class="spinner-border spinner-border-sm text-primary ms-auto"></span>
     {% endif %}
