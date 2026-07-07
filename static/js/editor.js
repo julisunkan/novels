@@ -11,9 +11,19 @@ document.addEventListener('DOMContentLoaded', function() {
     currentChapterId = chapterId.value;
     updateCounts(textarea.value);
   }
+
+  // Wire chapter buttons via data attributes (avoids inline content in onclick)
+  document.querySelectorAll('.editor-chapter-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const id = this.dataset.chapterId;
+      const num = this.dataset.chapterNum;
+      const title = this.dataset.chapterTitle;
+      loadChapter(id, num, title);
+    });
+  });
 });
 
-async function loadChapter(id, num, title, content) {
+async function loadChapter(id, num, title) {
   // Autosave current chapter BEFORE switching — capture IDs now, before they change
   if (isDirty && currentChapterId) {
     const savingId = currentChapterId;
@@ -26,16 +36,27 @@ async function loadChapter(id, num, title, content) {
   const titleEl = document.getElementById('editorChapterTitle');
   const hiddenId = document.getElementById('currentChapterId');
 
-  if (textarea) {
-    textarea.value = content;
-    updateCounts(content);
-  }
   if (titleEl) titleEl.textContent = `Chapter ${num}: ${title}`;
   if (hiddenId) hiddenId.value = id;
 
   // Update active state in sidebar
   document.querySelectorAll('.editor-chapter-btn').forEach(btn => btn.classList.remove('active'));
   document.getElementById(`chbtn-${id}`)?.classList.add('active');
+
+  // Fetch content via API — avoids large/broken inline onclick payloads
+  const projectId = document.getElementById('currentProjectId')?.value;
+  if (textarea && projectId) {
+    setAutosaveIndicator('Loading…');
+    try {
+      const resp = await fetch(`/project/${projectId}/editor/chapter/${id}/content`);
+      const data = await resp.json();
+      textarea.value = data.content || '';
+      updateCounts(textarea.value);
+    } catch(e) {
+      setAutosaveIndicator('Failed to load chapter');
+      return;
+    }
+  }
 
   isDirty = false;
   setAutosaveIndicator('All changes saved');
