@@ -1,4 +1,4 @@
-// AI Novel Creator — Service Worker
+// KDP Novels & Storybook Creator — Service Worker
 const CACHE_NAME = 'novelai-v1';
 const STATIC_ASSETS = [
   '/static/css/style.css',

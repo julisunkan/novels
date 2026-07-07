@@ -4,7 +4,7 @@ AI NOVEL CREATOR — MICROSOFT STORE LISTING
 
 APP NAME
 --------
-AI Novel Creator
+KDP Novels & Storybook Creator
 
 SHORT DESCRIPTION (up to 100 characters)
 -----------------------------------------
@@ -15,9 +15,9 @@ FULL DESCRIPTION
 ----------------
 Turn your story ideas into complete books — powered by Groq AI.
 
-AI Novel Creator is the ultimate writing companion for authors, storytellers, and aspiring novelists. Describe your concept, and the app handles the rest: it generates compelling titles, subtitles, book premises, full chapter-by-chapter outlines, deep character profiles, world-building lore, front and back matter, and entire chapter drafts — all using state-of-the-art Groq LLM (LLaMA 3.3 70B).
+KDP Novels & Storybook Creator is the ultimate writing companion for authors, storytellers, and aspiring novelists. Describe your concept, and the app handles the rest: it generates compelling titles, subtitles, book premises, full chapter-by-chapter outlines, deep character profiles, world-building lore, front and back matter, and entire chapter drafts — all using state-of-the-art Groq LLM (LLaMA 3.3 70B).
 
-Whether you write fantasy epics, sci-fi thrillers, romance novels, children's books, or business non-fiction, AI Novel Creator adapts to your genre, tone, point of view, and audience — giving you a professional manuscript foundation in the time it used to take just to plan a chapter.
+Whether you write fantasy epics, sci-fi thrillers, romance novels, children's books, or business non-fiction, KDP Novels & Storybook Creator adapts to your genre, tone, point of view, and audience — giving you a professional manuscript foundation in the time it used to take just to plan a chapter.
 
 📝 Everything you need, start to finish:
 Generate titles and subtitles, write your book premise with one click, build a structured outline, develop characters with backstories and motivations, create rich world-building notes, and watch full chapter drafts appear — one by one, automatically, while you take notes.

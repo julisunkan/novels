@@ -53,14 +53,14 @@ def create_app():
             db = get_db()
             from utils.helpers import get_setting
             return {
-                'app_name': get_setting(db, 'app_name', 'AI Novel Creator'),
+                'app_name': get_setting(db, 'app_name', 'KDP Novels & Storybook Creator'),
                 'app_footer': '',
                 'default_theme': get_setting(db, 'default_theme', 'dark'),
                 'maintenance_mode': get_setting(db, 'maintenance_mode', '0') == '1',
             }
         except Exception:
             return {
-                'app_name': 'AI Novel Creator',
+                'app_name': 'KDP Novels & Storybook Creator',
                 'app_footer': '',
                 'default_theme': 'dark',
                 'maintenance_mode': False,
