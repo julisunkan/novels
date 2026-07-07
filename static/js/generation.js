@@ -114,7 +114,12 @@ async function fetchProgress(projectId) {
     } else if ((data.status === 'paused' || data.status === 'draft') && !data.thread_alive) {
       stopPolling();
       updateButtonStates(data.status);
-      setStatusText('Paused', 'fas fa-pause-circle');
+      if (data.rate_limit_message) {
+        setStatusText('Paused — rate limit hit', 'fas fa-pause-circle text-warning');
+        showRateLimitBanner(data.rate_limit_message);
+      } else {
+        setStatusText('Paused', 'fas fa-pause-circle');
+      }
     } else if (data.status === 'generating' || data.thread_alive) {
       updateButtonStates('generating');
     }
@@ -258,6 +263,37 @@ async function generateSingleChapter(chapterNumber) {
     if (label) label.innerHTML = '<i class="fas fa-clock"></i> Pending';
     if (btn) btn.disabled = false;
   }
+}
+
+function showRateLimitBanner(message) {
+  // Remove any existing banner first
+  const existing = document.getElementById('rateLimitBanner');
+  if (existing) existing.remove();
+
+  const banner = document.createElement('div');
+  banner.id = 'rateLimitBanner';
+  banner.className = 'alert alert-warning alert-dismissible fade show mt-3';
+  banner.innerHTML = `
+    <i class="fas fa-clock me-2"></i>
+    <strong>Rate limit reached.</strong> ${message}
+    <br><small class="text-muted mt-1 d-block">
+      <i class="fas fa-info-circle me-1"></i>
+      Your progress is saved. Click <strong>Resume</strong> once the wait has elapsed.
+    </small>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  `;
+
+  // Insert after the generation control card
+  const controlCard = document.querySelector('.generation-control-card');
+  if (controlCard && controlCard.parentElement) {
+    controlCard.parentElement.insertAdjacentElement('afterend', banner);
+  } else {
+    const content = document.querySelector('.content-area');
+    if (content) content.prepend(banner);
+  }
+
+  // Also show a toast so the user notices even if they scroll away
+  showToast(message, 'warning', 10000);
 }
 
 function setStatusText(text, iconClass) {

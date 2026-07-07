@@ -5,7 +5,8 @@ from flask import Blueprint, render_template, request, redirect, url_for, jsonif
 from database import get_db, get_raw_db
 from utils.helpers import (get_setting, log_history, update_project_stats,
                             count_words, increment_statistic)
-from services.groq_service import generate_chapter, generate_chapter_memory, generate_image_prompt
+from services.groq_service import (generate_chapter, generate_chapter_memory,
+                                   generate_image_prompt, GroqRateLimitError)
 from services.memory_service import build_full_prompt_context, save_chapter_memory
 
 bp = Blueprint('chapters', __name__)
@@ -118,13 +119,30 @@ def _generation_worker(app, project_id):
                         dict(outline_ch), chars_ctx, world_ctx, memory_ctx,
                         template, project['temperature'], project['top_p'], project['max_tokens']
                     )
+                except GroqRateLimitError as e:
+                    # Daily/minute token limit hit — pause the whole run so the
+                    # user can resume after the wait period.
+                    db.execute(
+                        'INSERT INTO generation_logs (project_id, log_type, status, error_message) VALUES (?,?,?,?)',
+                        (project_id, 'chapter', 'rate_limit', str(e))
+                    )
+                    db.execute(
+                        "UPDATE chapters SET status='pending' WHERE project_id=? AND chapter_number=?",
+                        (project_id, ch_num)
+                    )
+                    db.execute(
+                        "UPDATE projects SET status='paused', updated_at=CURRENT_TIMESTAMP WHERE id=?",
+                        (project_id,)
+                    )
+                    db.commit()
+                    return  # Exit worker; user resumes manually after the wait
                 except Exception as e:
                     db.execute(
                         'INSERT INTO generation_logs (project_id, log_type, status, error_message) VALUES (?,?,?,?)',
                         (project_id, 'chapter', 'error', str(e))
                     )
                     db.commit()
-                    # Mark chapter as failed, continue
+                    # Mark chapter as failed, continue to next chapter
                     db.execute(
                         "UPDATE chapters SET status='pending' WHERE project_id=? AND chapter_number=?",
                         (project_id, ch_num)
@@ -401,6 +419,13 @@ def generation_progress(project_id):
         (project_id,)
     ).fetchone()
 
+    # Surface any rate-limit message so the UI can show it
+    rate_limit_log = db.execute(
+        "SELECT error_message FROM generation_logs WHERE project_id=? AND status='rate_limit' ORDER BY id DESC LIMIT 1",
+        (project_id,)
+    ).fetchone()
+    rate_limit_message = rate_limit_log['error_message'] if rate_limit_log else None
+
     return jsonify({
         'status': project['status'],
         'thread_alive': thread_alive,
@@ -414,6 +439,7 @@ def generation_progress(project_id):
         'last_tokens': last_log['tokens_used'] if last_log else 0,
         'last_gen_time': round(last_log['generation_time'], 1) if last_log else 0,
         'chapters': [dict(c) for c in chapters],
+        'rate_limit_message': rate_limit_message,
     })
 
 
@@ -494,6 +520,13 @@ def generate_single_chapter(project_id, chapter_number):
                 chars_ctx, world_ctx, memory_ctx, template,
                 project['temperature'], project['top_p'], project['max_tokens']
             )
+        except GroqRateLimitError as e:
+            db.execute(
+                "UPDATE chapters SET status='pending', updated_at=CURRENT_TIMESTAMP WHERE id=?",
+                (chapter_id,)
+            )
+            db.commit()
+            return jsonify({'error': str(e)}), 429
         except Exception as e:
             db.execute(
                 "UPDATE chapters SET status='pending', updated_at=CURRENT_TIMESTAMP WHERE id=?",
@@ -559,7 +592,7 @@ def regenerate_chapter(project_id, chapter_id):
         db, project_id, chapter_number=chapter['chapter_number']
     )
     try:
-        content, tokens, elapsed = generate_chapter(
+        content, tokens, elapsed = generate_chapter(  # noqa: E501
             api_key, model, dict(project), outline_ch,
             chars_ctx, world_ctx, memory_ctx, template,
             project['temperature'], project['top_p'], project['max_tokens']
@@ -580,6 +613,8 @@ def regenerate_chapter(project_id, chapter_id):
             pass
         update_project_stats(db, project_id)
         return jsonify({'success': True, 'word_count': wc, 'content': content})
+    except GroqRateLimitError as e:
+        return jsonify({'error': str(e)}), 429
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

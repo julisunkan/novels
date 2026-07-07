@@ -1,7 +1,42 @@
 """Groq API integration service."""
+import re
 import time
 import json
-from groq import Groq
+from groq import Groq, RateLimitError
+
+
+# ── Rate-limit helpers ──────────────────────────────────────────────────────
+
+class GroqRateLimitError(Exception):
+    """Raised when the Groq API returns 429 and the wait is too long to auto-retry."""
+    def __init__(self, message, retry_after_seconds=None):
+        super().__init__(message)
+        self.retry_after_seconds = retry_after_seconds
+
+
+def _parse_retry_seconds(error_str):
+    """
+    Extract the retry-after duration in seconds from a Groq 429 error message.
+    Handles formats like '6m18.432s' or '45.123s'.
+    Returns float seconds, or None if unparseable.
+    """
+    m = re.search(r'try again in (?:(\d+)m)?(\d+(?:\.\d+)?)s', str(error_str))
+    if not m:
+        return None
+    minutes = int(m.group(1)) if m.group(1) else 0
+    seconds = float(m.group(2))
+    return minutes * 60 + seconds
+
+
+def _format_wait(seconds):
+    """Return a human-readable wait string, e.g. '6 min 18 s' or '45 s'."""
+    if seconds is None:
+        return 'a few minutes'
+    m = int(seconds // 60)
+    s = int(seconds % 60)
+    if m:
+        return f'{m} min {s} s'
+    return f'{s} s'
 
 
 def get_groq_client(api_key):
@@ -9,24 +44,57 @@ def get_groq_client(api_key):
     return Groq(api_key=api_key)
 
 
+# Auto-retry threshold: waits up to this many seconds are handled transparently.
+_AUTO_RETRY_MAX_SECONDS = 65
+_AUTO_RETRY_ATTEMPTS = 3
+
+
 def call_groq(api_key, model, messages, temperature=0.7, top_p=0.9, max_tokens=4096):
     """
     Call the Groq API and return (content, tokens_used, elapsed_seconds).
-    Raises on API error.
+
+    Rate-limit behaviour:
+      - Wait ≤ 65 s  → sleep the exact amount and retry (up to 3 attempts).
+      - Wait  > 65 s → raise GroqRateLimitError with the formatted wait time.
+    Other API errors are re-raised as-is.
     """
     client = get_groq_client(api_key)
-    start = time.time()
-    response = client.chat.completions.create(
-        model=model,
-        messages=messages,
-        temperature=float(temperature),
-        top_p=float(top_p),
-        max_tokens=int(max_tokens),
+
+    for attempt in range(_AUTO_RETRY_ATTEMPTS):
+        start = time.time()
+        try:
+            response = client.chat.completions.create(
+                model=model,
+                messages=messages,
+                temperature=float(temperature),
+                top_p=float(top_p),
+                max_tokens=int(max_tokens),
+            )
+            elapsed = time.time() - start
+            content = response.choices[0].message.content or ''
+            tokens = response.usage.total_tokens if response.usage else 0
+            return content, tokens, elapsed
+
+        except RateLimitError as exc:
+            retry_secs = _parse_retry_seconds(str(exc))
+
+            if retry_secs is not None and retry_secs <= _AUTO_RETRY_MAX_SECONDS:
+                # Short wait — sleep and retry transparently
+                time.sleep(retry_secs + 2)   # +2 s buffer
+                continue
+
+            # Long wait — surface a friendly error to the caller
+            wait_str = _format_wait(retry_secs)
+            raise GroqRateLimitError(
+                f'Groq daily token limit reached. Please try again in {wait_str}.',
+                retry_after_seconds=retry_secs,
+            ) from exc
+
+    # Exhausted retries — raise a generic rate-limit error
+    raise GroqRateLimitError(
+        f'Groq rate limit persists after {_AUTO_RETRY_ATTEMPTS} retries. '
+        'Wait a minute and resume generation.'
     )
-    elapsed = time.time() - start
-    content = response.choices[0].message.content or ''
-    tokens = response.usage.total_tokens if response.usage else 0
-    return content, tokens, elapsed
 
 
 def generate_titles(api_key, model, project_info, temperature=0.9, top_p=0.9, max_tokens=1024):
