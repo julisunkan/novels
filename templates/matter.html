@@ -41,7 +41,7 @@
               <div class="accordion-body">
                 <div class="d-flex gap-2 mb-3">
                   <button class="btn btn-sm btn-primary" onclick="generateMatter('{{ type_key }}', 'front')" {% if not groq_configured %}disabled{% endif %}>
-                    <i class="fas fa-magic me-1"></i>Generate with AI
+                    <i class="fas fa-magic me-1"></i>Generate
                   </button>
                   <button class="btn btn-sm btn-outline-secondary" onclick="saveMatter('{{ type_key }}')">
                     <i class="fas fa-save me-1"></i>Save
@@ -83,7 +83,7 @@
               <div class="accordion-body">
                 <div class="d-flex gap-2 mb-3">
                   <button class="btn btn-sm btn-primary" onclick="generateMatter('{{ type_key }}', 'back')" {% if not groq_configured %}disabled{% endif %}>
-                    <i class="fas fa-magic me-1"></i>Generate with AI
+                    <i class="fas fa-magic me-1"></i>Generate
                   </button>
                   <button class="btn btn-sm btn-outline-secondary" onclick="saveMatter('{{ type_key }}')">
                     <i class="fas fa-save me-1"></i>Save
