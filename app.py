@@ -52,14 +52,14 @@ def create_app():
             from utils.helpers import get_setting
             return {
                 'app_name': get_setting(db, 'app_name', 'AI Novel Creator'),
-                'app_footer': get_setting(db, 'app_footer', '© 2024 AI Novel Creator'),
+                'app_footer': '',
                 'default_theme': get_setting(db, 'default_theme', 'dark'),
                 'maintenance_mode': get_setting(db, 'maintenance_mode', '0') == '1',
             }
         except Exception:
             return {
                 'app_name': 'AI Novel Creator',
-                'app_footer': '© 2024 AI Novel Creator',
+                'app_footer': '',
                 'default_theme': 'dark',
                 'maintenance_mode': False,
             }
