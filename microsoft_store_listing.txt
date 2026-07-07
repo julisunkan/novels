@@ -1,0 +1,85 @@
+================================================================
+AI NOVEL CREATOR — MICROSOFT STORE LISTING
+================================================================
+
+APP NAME
+--------
+AI Novel Creator
+
+SHORT DESCRIPTION (up to 100 characters)
+-----------------------------------------
+Write full novels and storybooks with AI — outline, characters, worlds, and chapters in minutes.
+
+
+FULL DESCRIPTION
+----------------
+Turn your story ideas into complete books — powered by Groq AI.
+
+AI Novel Creator is the ultimate writing companion for authors, storytellers, and aspiring novelists. Describe your concept, and the app handles the rest: it generates compelling titles, subtitles, book premises, full chapter-by-chapter outlines, deep character profiles, world-building lore, front and back matter, and entire chapter drafts — all using state-of-the-art Groq LLM (LLaMA 3.3 70B).
+
+Whether you write fantasy epics, sci-fi thrillers, romance novels, children's books, or business non-fiction, AI Novel Creator adapts to your genre, tone, point of view, and audience — giving you a professional manuscript foundation in the time it used to take just to plan a chapter.
+
+📝 Everything you need, start to finish:
+Generate titles and subtitles, write your book premise with one click, build a structured outline, develop characters with backstories and motivations, create rich world-building notes, and watch full chapter drafts appear — one by one, automatically, while you take notes.
+
+✍️ A real manuscript editor, built in:
+Every chapter lands in a full prose editor. Search and replace across your entire manuscript, manually refine any section, and regenerate any chapter you're not happy with. Your edits are saved automatically.
+
+📤 Export to Word, PDF, or plain text:
+When your book is ready, export the complete manuscript — chapters, front matter, back matter, table of contents, page numbers — as a DOCX, PDF, or TXT file, ready for publishing or self-printing.
+
+🔒 Private and self-hosted:
+All your books live on your own machine. Nothing is sent to third-party servers beyond the AI generation calls you explicitly trigger. Your stories stay yours.
+
+🛡️ Content moderation built in:
+Readers and reviewers can flag AI-generated content directly from any chapter, and the admin panel lets you review, action, or dismiss reports — keeping your platform responsible and accountable.
+
+📱 Works on desktop, tablet, and as a standalone app:
+Fully installable as a Progressive Web App (PWA) — pin it to your taskbar, use it offline for reading and editing, and get a native app-like experience on any Windows device.
+
+
+FEATURES
+--------
+- AI-generated titles, subtitles, and book premises (Groq LLaMA 3.3 70B)
+- Full chapter-by-chapter outline generation
+- Character profiles with personality, backstory, goals, and relationships
+- World-building system (locations, magic, lore, politics, technology, and more)
+- Front and back matter (dedication, foreword, preface, epilogue, about the author)
+- Full manuscript prose editor with autosave
+- Search and replace across the entire manuscript
+- Pause, resume, and regenerate individual chapters
+- Export to DOCX, PDF, and plain text
+- AI image prompts for chapter illustrations
+- Dark and light theme
+- User content reporting and admin moderation panel
+- Installable PWA — works like a native Windows app
+- Password-protected admin panel
+- Generation statistics and logs
+
+
+KEYWORDS / SEARCH TAGS
+-----------------------
+AI writing, novel generator, book creator, story writer, AI author, creative writing,
+novel writing app, AI story generator, manuscript editor, book writing software,
+fiction writer, chapter generator, Groq AI, LLaMA, outline generator, worldbuilding,
+character creator, fantasy writer, sci-fi writer, romance writer, book export,
+self-publishing, writing assistant, AI book, storybook creator, PWA writing tool
+
+
+CATEGORY
+--------
+Primary:   Productivity
+Secondary: Education
+
+AGE RATING
+----------
+3+ (no mature content in the app itself; generated content depends on user prompts)
+
+PRIVACY POLICY NOTE
+-------------------
+No user data is collected. All content is stored locally. AI generation uses
+user-supplied Groq API key. No accounts or sign-ups required.
+
+================================================================
+END OF LISTING
+================================================================
