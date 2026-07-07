@@ -11,16 +11,6 @@ document.addEventListener('DOMContentLoaded', function() {
     currentChapterId = chapterId.value;
     updateCounts(textarea.value);
   }
-
-  // Wire chapter buttons via data attributes (avoids inline content in onclick)
-  document.querySelectorAll('.editor-chapter-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-      const id = this.dataset.chapterId;
-      const num = this.dataset.chapterNum;
-      const title = this.dataset.chapterTitle;
-      loadChapter(id, num, title);
-    });
-  });
 });
 
 async function loadChapter(id, num, title) {

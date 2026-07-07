@@ -26,10 +26,8 @@
       {% if chapters %}
       {% for ch in chapters %}
       <button class="editor-chapter-btn {% if loop.first %}active{% endif %}"
-              data-chapter-id="{{ ch.id }}"
-              data-chapter-num="{{ ch.chapter_number }}"
-              data-chapter-title="{{ ch.chapter_title | e }}"
-              id="chbtn-{{ ch.id }}">
+              id="chbtn-{{ ch.id }}"
+              onclick="loadChapter({{ ch.id }}, {{ ch.chapter_number }}, {{ ch.chapter_title | tojson }})">
         <div class="ec-num">{{ ch.chapter_number }}</div>
         <div class="ec-info">
           <div class="ec-title">{{ ch.chapter_title[:25] }}{% if ch.chapter_title|length > 25 %}…{% endif %}</div>
