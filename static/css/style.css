@@ -1137,21 +1137,3 @@ input[type="range"]::-moz-range-thumb     { background: var(--primary); border: 
   .quick-action-btn { min-width: 70px; padding: 12px; }
 }
 
-/* ===== TOOLTIP OVERRIDES ===== */
-.tooltip {
-  --bs-tooltip-bg: transparent;
-  pointer-events: none;
-}
-.tooltip .tooltip-inner {
-  background-color: transparent !important;
-  color: #f5c518 !important;
-  font-weight: 600;
-  font-size: 0.78rem;
-  text-shadow: 0 1px 4px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.7);
-  box-shadow: none !important;
-  padding: 2px 6px;
-  white-space: nowrap;
-}
-.tooltip .tooltip-arrow {
-  display: none;
-}
