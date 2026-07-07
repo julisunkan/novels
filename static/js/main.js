@@ -111,7 +111,11 @@ document.addEventListener('DOMContentLoaded', function() {
   const tooltipEls = document.querySelectorAll('[title]');
   tooltipEls.forEach(el => {
     if (!el.dataset.bsToggle) {
-      new bootstrap.Tooltip(el, { trigger: 'hover', placement: 'top' });
+      new bootstrap.Tooltip(el, {
+        trigger: 'hover',
+        placement: 'top',
+        offset: [0, 10],
+      });
     }
   });
 });
