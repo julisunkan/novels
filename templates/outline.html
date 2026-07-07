@@ -56,9 +56,17 @@
           </div>
         </div>
         <div class="outline-actions">
-          <button class="btn btn-sm btn-outline-primary" onclick="editChapterModal({{ ch.id }}, {{ ch.chapter_title|tojson }}, {{ ch.summary|tojson }}, {{ ch.target_word_count }})">
+          {% if ch.chapter_number in generated_map %}
+          <a href="{{ url_for('editor.editor_page', project_id=project.id) }}?chapter={{ generated_map[ch.chapter_number] }}"
+             class="btn btn-sm btn-outline-primary" title="Edit generated chapter in editor">
+            <i class="fas fa-pen"></i>
+          </a>
+          {% else %}
+          <button class="btn btn-sm btn-outline-secondary" title="Edit outline entry"
+                  onclick="editChapterModal({{ ch.id }}, {{ ch.chapter_title|tojson }}, {{ ch.summary|tojson }}, {{ ch.target_word_count }})">
             <i class="fas fa-edit"></i>
           </button>
+          {% endif %}
           <button class="btn btn-sm btn-outline-secondary" onclick="duplicateChapter({{ ch.id }})">
             <i class="fas fa-copy"></i>
           </button>

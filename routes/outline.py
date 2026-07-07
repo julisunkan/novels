@@ -19,8 +19,15 @@ def outline_page(project_id):
         (project_id,)
     ).fetchall()
     groq_configured = bool(get_setting(db, 'groq_api_key'))
+    # Build a mapping of chapter_number → generated chapter id so the template
+    # can link the edit icon directly to the editor when content exists.
+    gen_rows = db.execute(
+        "SELECT id, chapter_number FROM chapters WHERE project_id = ? AND status = 'generated'",
+        (project_id,)
+    ).fetchall()
+    generated_map = {row['chapter_number']: row['id'] for row in gen_rows}
     return render_template('outline.html', project=project, chapters=chapters,
-                           groq_configured=groq_configured)
+                           groq_configured=groq_configured, generated_map=generated_map)
 
 
 @bp.route('/project/<int:project_id>/outline/generate', methods=['POST'])
