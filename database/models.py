@@ -269,11 +269,15 @@ def init_db(db_path):
     conn = sqlite3.connect(db_path)
     conn.executescript(SCHEMA)
 
-    # Seed default settings
+    # Seed default settings: insert missing rows, and fill in any empty values
     for key, value in DEFAULT_SETTINGS:
         conn.execute(
             'INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)',
             (key, value)
+        )
+        conn.execute(
+            "UPDATE settings SET value=? WHERE key=? AND (value IS NULL OR value='')",
+            (value, key)
         )
 
     # Seed default prompt templates

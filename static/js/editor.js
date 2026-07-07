@@ -167,9 +167,26 @@ async function doReplace(replaceAll) {
 
 async function reloadCurrentChapter(projectId) {
   if (!currentChapterId) return;
-  // The chapter content was changed server-side; reload to reflect
-  // For now, just indicate stale state
-  setAutosaveIndicator('Content updated server-side. Reload to see changes.');
+  try {
+    const resp = await fetch(`/project/${projectId}/editor/chapter/${currentChapterId}/content`);
+    const data = await resp.json();
+    if (data.error) { setAutosaveIndicator('Reload to see changes.'); return; }
+    const textarea = document.getElementById('editorArea');
+    if (textarea) {
+      textarea.value = data.content || '';
+      updateCounts(textarea.value);
+    }
+    // Update sidebar word count
+    const chBtn = document.getElementById(`chbtn-${currentChapterId}`);
+    if (chBtn) {
+      const wcEl = chBtn.querySelector('.ec-words');
+      if (wcEl) wcEl.textContent = (data.word_count || 0).toLocaleString() + ' words';
+    }
+    isDirty = false;
+    setAutosaveIndicator('All changes saved');
+  } catch(e) {
+    setAutosaveIndicator('Reload to see latest changes.');
+  }
 }
 
 // ===== KEYBOARD SHORTCUTS =====

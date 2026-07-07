@@ -31,6 +31,23 @@
   --topnav-bg: rgba(17, 17, 24, 0.95);
   --scrollbar-track: #1a1a25;
   --scrollbar-thumb: #2a2a3a;
+
+  /* Override Bootstrap defaults for dark theme */
+  --bs-body-bg: #0a0a0f;
+  --bs-body-color: #e2e8f0;
+  --bs-card-bg: #16161f;
+  --bs-card-border-color: #2a2a3a;
+  --bs-border-color: #2a2a3a;
+  --bs-modal-bg: #16161f;
+  --bs-modal-border-color: #2a2a3a;
+  --bs-dropdown-bg: #16161f;
+  --bs-dropdown-border-color: #2a2a3a;
+  --bs-dropdown-link-color: #e2e8f0;
+  --bs-dropdown-link-hover-bg: #1c1c28;
+  --bs-tertiary-bg: #111118;
+  --bs-secondary-bg: #111118;
+  --bs-body-color-rgb: 226, 232, 240;
+  --bs-body-bg-rgb: 10, 10, 15;
 }
 
 [data-theme="light"] {
@@ -47,6 +64,10 @@
   --topnav-bg: rgba(248, 250, 252, 0.95);
   --scrollbar-track: #f1f5f9;
   --scrollbar-thumb: #cbd5e1;
+
+  /* Bootstrap light overrides */
+  --bs-body-bg: #f8fafc;
+  --bs-body-color: #1e293b;
 }
 
 /* ===== RESET & BASE ===== */

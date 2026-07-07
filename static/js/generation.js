@@ -170,35 +170,37 @@ function updateProgressUI(data) {
 function updateButtonStates(status) {
   const btnStart = document.getElementById('btnStart');
   const btnPause = document.getElementById('btnPause');
-  const btnStop = document.getElementById('btnStop');
+  const btnStop  = document.getElementById('btnStop');
 
   if (!btnStart) return;
 
+  const setDisabled = (btn, val) => { if (btn) btn.disabled = val; };
+
   if (status === 'generating') {
-    btnStart.disabled = true;
-    btnPause.disabled = false;
-    btnStop.disabled = false;
+    setDisabled(btnStart, true);
+    setDisabled(btnPause, false);
+    setDisabled(btnStop, false);
     btnStart.innerHTML = '<i class="fas fa-play me-2"></i>Generating…';
   } else if (status === 'pausing') {
-    btnStart.disabled = true;
-    btnPause.disabled = true;
-    btnStop.disabled = false;
+    setDisabled(btnStart, true);
+    setDisabled(btnPause, true);
+    setDisabled(btnStop, false);
     btnStart.innerHTML = '<i class="fas fa-play me-2"></i>Pausing…';
   } else if (status === 'paused') {
-    btnStart.disabled = false;
-    btnPause.disabled = true;
-    btnStop.disabled = true;
+    setDisabled(btnStart, false);
+    setDisabled(btnPause, true);
+    setDisabled(btnStop, true);
     btnStart.innerHTML = '<i class="fas fa-play me-2"></i>Resume';
     btnStart.dataset.status = 'paused';
   } else if (status === 'completed') {
-    btnStart.disabled = false;
-    btnPause.disabled = true;
-    btnStop.disabled = true;
+    setDisabled(btnStart, false);
+    setDisabled(btnPause, true);
+    setDisabled(btnStop, true);
     btnStart.innerHTML = '<i class="fas fa-redo me-2"></i>Regenerate';
   } else {
-    btnStart.disabled = false;
-    btnPause.disabled = true;
-    btnStop.disabled = true;
+    setDisabled(btnStart, false);
+    setDisabled(btnPause, true);
+    setDisabled(btnStop, true);
     btnStart.innerHTML = '<i class="fas fa-play me-2"></i>Start Generation';
   }
 }

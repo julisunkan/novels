@@ -17,10 +17,8 @@ function toggleTheme() {
   applyTheme(current === 'dark' ? 'light' : 'dark');
 }
 
-// Apply theme on load
+// Sync theme icon on load (theme itself is applied by the inline <head> script)
 (function() {
-  const saved = localStorage.getItem('theme');
-  if (saved) applyTheme(saved);
   const icon = document.getElementById('themeIcon');
   if (icon) {
     icon.className = getTheme() === 'dark' ? 'fas fa-sun' : 'fas fa-moon';

@@ -37,6 +37,19 @@ def save_chapter_content(project_id, chapter_id):
     return jsonify({'success': True, 'word_count': wc})
 
 
+@bp.route('/project/<int:project_id>/editor/chapter/<int:chapter_id>/content', methods=['GET'])
+def get_chapter_content(project_id, chapter_id):
+    """Return a single chapter's content as JSON (used by editor after search-replace)."""
+    db = get_db()
+    ch = db.execute(
+        'SELECT id, chapter_number, chapter_title, content, word_count FROM chapters WHERE id=? AND project_id=?',
+        (chapter_id, project_id)
+    ).fetchone()
+    if not ch:
+        return jsonify({'error': 'Not found'}), 404
+    return jsonify(dict(ch))
+
+
 @bp.route('/project/<int:project_id>/search-replace', methods=['POST'])
 def search_replace(project_id):
     db = get_db()
