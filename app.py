@@ -1,6 +1,6 @@
 """AI Novel & Story Book Creator — main application entry point."""
 import os
-from flask import Flask, render_template, g
+from flask import Flask, render_template, g, send_from_directory
 from config import Config
 from database import init_app, get_db
 from database.models import init_db
@@ -65,6 +65,15 @@ def create_app():
                 'default_theme': 'dark',
                 'maintenance_mode': False,
             }
+
+    # Serve favicon.ico from static/icons to suppress browser 404s
+    @app.route('/favicon.ico')
+    def favicon():
+        return send_from_directory(
+            os.path.join(app.root_path, 'static', 'icons'),
+            'icon-192.png',
+            mimetype='image/png'
+        )
 
     # Error handlers
     @app.errorhandler(404)

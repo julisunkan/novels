@@ -7,6 +7,20 @@ from services.groq_service import generate_titles
 
 bp = Blueprint('projects', __name__)
 
+
+def _safe_int(value, default):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _safe_float(value, default):
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
 GENRES = ['Fantasy', 'Sci-Fi', 'Romance', 'Mystery', 'Adventure', 'Thriller',
           'Children', 'Comedy', 'Historical', 'Business', 'Educational', 'Horror', 'Other']
 STORY_TYPES = ['Novel', 'Novella', 'Short Story Collection', 'Non-Fiction', 'Memoir', 'Biography']
@@ -139,11 +153,11 @@ def edit_project(project_id):
                 data.get('audience', ''), data.get('description', ''), data.get('language', ''),
                 data.get('story_type', ''), data.get('writing_style', ''),
                 data.get('point_of_view', ''), data.get('tense', ''), data.get('tone', ''),
-                int(data.get('num_chapters', 10)), int(data.get('words_per_chapter', 2000)),
-                data.get('creativity_level', 'balanced'), float(data.get('temperature', 0.7)),
-                float(data.get('top_p', 0.9)), int(data.get('max_tokens', 4096)),
+                _safe_int(data.get('num_chapters'), 10), _safe_int(data.get('words_per_chapter'), 2000),
+                data.get('creativity_level', 'balanced'), _safe_float(data.get('temperature'), 0.7),
+                _safe_float(data.get('top_p'), 0.9), _safe_int(data.get('max_tokens'), 4096),
                 1 if data.get('include_images') else 0,
-                int(data.get('images_per_chapter', 1)), data.get('image_style', 'Realistic'),
+                _safe_int(data.get('images_per_chapter'), 1), data.get('image_style', 'Realistic'),
                 project_id
             )
         )

@@ -603,4 +603,7 @@ def duplicate_chapter_content(project_id, chapter_id):
     ).lastrowid
     db.commit()
     update_project_stats(db, project_id)
-    return jsonify({'success': True, 'new_id': new_id})
+    # If called via AJAX, return JSON; otherwise redirect back to chapter list
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.accept_mimetypes.best == 'application/json':
+        return jsonify({'success': True, 'new_id': new_id})
+    return redirect(url_for('projects.project_detail', project_id=project_id))
