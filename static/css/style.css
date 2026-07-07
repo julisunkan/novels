@@ -66,6 +66,16 @@
   --bs-secondary-bg: #251a12;
   --bs-body-color-rgb: 240, 224, 200;
   --bs-body-bg-rgb: 28, 20, 16;
+  /* Bootstrap table overrides */
+  --bs-table-color: #f0e0c8;
+  --bs-table-bg: transparent;
+  --bs-table-hover-color: #f0e0c8;
+  --bs-table-hover-bg: rgba(255,255,255,0.05);
+  --bs-table-striped-color: #f0e0c8;
+  --bs-table-striped-bg: rgba(255,255,255,0.03);
+  --bs-table-active-color: #f0e0c8;
+  --bs-table-active-bg: rgba(255,255,255,0.07);
+  --bs-table-border-color: #4a3428;
 }
 
 /* ===== LIGHT THEME — warm cream ===== */
@@ -89,6 +99,16 @@
   --bs-body-color: #3d2b1f;
   --bs-card-bg: #ffffff;
   --bs-border-color: #d4b896;
+  /* Bootstrap table overrides */
+  --bs-table-color: #3d2b1f;
+  --bs-table-bg: transparent;
+  --bs-table-hover-color: #3d2b1f;
+  --bs-table-hover-bg: rgba(0,0,0,0.04);
+  --bs-table-striped-color: #3d2b1f;
+  --bs-table-striped-bg: rgba(0,0,0,0.02);
+  --bs-table-active-color: #3d2b1f;
+  --bs-table-active-bg: rgba(0,0,0,0.06);
+  --bs-table-border-color: #d4b896;
 }
 
 /* ===== RESET & BASE ===== */
