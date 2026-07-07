@@ -74,6 +74,47 @@ function showToast(message, type = 'info', duration = 4000) {
   setTimeout(() => { if (document.getElementById(id)) toastEl.remove(); }, duration);
 }
 
+// ===== CSRF PROTECTION =====
+// Automatically inject the CSRF token into all same-origin POST/PUT/DELETE fetch calls
+// and into all HTML forms on DOMContentLoaded.
+(function() {
+  const getMeta = () => document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+  // Intercept fetch so every mutating request carries the CSRF token header
+  const _fetch = window.fetch;
+  window.fetch = function(url, opts = {}) {
+    const method = (opts.method || 'GET').toUpperCase();
+    if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
+      const token = getMeta();
+      if (token) {
+        opts.headers = opts.headers || {};
+        if (opts.headers instanceof Headers) {
+          if (!opts.headers.has('X-CSRFToken')) opts.headers.set('X-CSRFToken', token);
+        } else {
+          opts.headers['X-CSRFToken'] = opts.headers['X-CSRFToken'] || token;
+        }
+      }
+    }
+    return _fetch.apply(this, [url, opts]);
+  };
+
+  // Inject hidden csrf_token field into every HTML form that submits via POST
+  document.addEventListener('DOMContentLoaded', function() {
+    const token = getMeta();
+    if (!token) return;
+    document.querySelectorAll('form').forEach(function(form) {
+      const method = (form.method || 'get').toLowerCase();
+      if (method === 'post' && !form.querySelector('[name="csrf_token"]')) {
+        const inp = document.createElement('input');
+        inp.type = 'hidden';
+        inp.name = 'csrf_token';
+        inp.value = token;
+        form.appendChild(inp);
+      }
+    });
+  });
+})();
+
 // ===== GENERAL AJAX FETCH HELPER =====
 async function apiPost(url, data = {}) {
   const resp = await fetch(url, {

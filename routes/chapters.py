@@ -570,11 +570,14 @@ def regenerate_chapter(project_id, chapter_id):
             (content, wc, chapter_id)
         )
         db.commit()
-        # Regenerate memory
-        memory_data, _, _ = generate_chapter_memory(
-            api_key, model, chapter['chapter_title'], content, project['genre']
-        )
-        save_chapter_memory(db, chapter_id, memory_data)
+        # Regenerate memory (best-effort — don't fail the response if this errors)
+        try:
+            memory_data, _, _ = generate_chapter_memory(
+                api_key, model, chapter['chapter_title'], content, project['genre']
+            )
+            save_chapter_memory(db, chapter_id, memory_data)
+        except Exception:
+            pass
         update_project_stats(db, project_id)
         return jsonify({'success': True, 'word_count': wc, 'content': content})
     except Exception as e:

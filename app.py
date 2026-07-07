@@ -1,14 +1,18 @@
 """AI Novel & Story Book Creator — main application entry point."""
 import os
 from flask import Flask, render_template, g, send_from_directory
+from flask_wtf.csrf import CSRFProtect
 from config import Config
 from database import init_app, get_db
 from database.models import init_db
+
+csrf = CSRFProtect()
 
 
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
+    csrf.init_app(app)
 
     # Ensure required directories exist
     os.makedirs(os.path.dirname(app.config['DATABASE']), exist_ok=True)
@@ -90,4 +94,5 @@ def create_app():
 app = create_app()
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    debug = os.environ.get('FLASK_DEBUG', 'false').lower() == 'true'
+    app.run(host='0.0.0.0', port=5000, debug=debug)

@@ -1,9 +1,19 @@
 """Application configuration."""
 import os
+import warnings
+
+_FALLBACK_SECRET = 'ai-novel-creator-secret-key-change-me'
 
 
 class Config:
-    SECRET_KEY = os.environ.get('SESSION_SECRET', 'ai-novel-creator-secret-key-change-me')
+    _raw_secret = os.environ.get('SESSION_SECRET', _FALLBACK_SECRET)
+    if _raw_secret == _FALLBACK_SECRET:
+        warnings.warn(
+            "SESSION_SECRET is not set — using an insecure fallback key. "
+            "Set the SESSION_SECRET environment variable before deploying.",
+            stacklevel=2,
+        )
+    SECRET_KEY = _raw_secret
     DATABASE = os.path.join(os.path.dirname(__file__), 'database', 'novel_creator.db')
     EXPORTS_DIR = os.path.join(os.path.dirname(__file__), 'exports')
     UPLOADS_DIR = os.path.join(os.path.dirname(__file__), 'uploads')

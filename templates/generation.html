@@ -36,6 +36,7 @@
       <div class="card-body">
         <div class="gen-controls">
           <button id="btnStart" class="btn btn-success btn-lg"
+                  data-status="{{ project.status }}"
                   {% if not groq_configured or not outline or project.status in ['generating'] %}disabled{% endif %}>
             <i class="fas fa-play me-2"></i>
             {% if project.status == 'completed' %}Regenerate

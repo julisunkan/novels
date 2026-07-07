@@ -61,7 +61,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const startBtn = document.getElementById('btnStart');
   if (startBtn) {
     startBtn.addEventListener('click', function() {
-      const status = this.dataset.status || window.PROJECT_STATUS_CURRENT || 'draft';
+      const status = this.dataset.status || window.PROJECT_STATUS || 'draft';
       if (status === 'paused') {
         resumeGeneration();
       } else {
