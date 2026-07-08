@@ -289,6 +289,20 @@ a:hover { color: var(--primary-hover); }
 
 /* ===== FLASH & TOAST ===== */
 .flash-container { padding: 12px 28px 0; }
+
+/* ===== INLINE NOTIFICATIONS ===== */
+#inlineNotifications {
+  padding: 0;
+  margin-bottom: 4px;
+}
+#inlineNotifications .alert {
+  border-radius: var(--border-radius-sm);
+  font-size: 0.9rem;
+}
+#inlineNotifications .inline-confirm .btn {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
 .maintenance-banner {
   background: linear-gradient(135deg, var(--warning), #a93226);
   color: white;

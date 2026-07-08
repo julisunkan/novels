@@ -48,8 +48,9 @@
               <td><span class="status-pill status-{{ p.status }} small">{{ p.status }}</span></td>
               <td class="text-muted small">{{ '{:,}'.format(p.total_words) }} words</td>
               <td>
-                <form method="POST" action="{{ url_for('admin.delete_project', project_id=p.id) }}" style="display:inline">
-                  <button class="btn btn-xs btn-outline-danger" onclick="return confirm('Delete project?')">
+                <form method="POST" action="{{ url_for('admin.delete_project', project_id=p.id) }}" style="display:inline" id="dash-del-{{ p.id }}">
+                  <button type="button" class="btn btn-xs btn-outline-danger"
+                          onclick="showConfirm('Delete this project? This cannot be undone.', function(){ document.getElementById('dash-del-{{ p.id }}').submit(); })">
                     <i class="fas fa-trash"></i>
                   </button>
                 </form>
@@ -101,10 +102,11 @@
         </form>
         <hr>
         <p class="text-muted small mb-2">Restore from a .db backup file:</p>
-        <form method="POST" action="{{ url_for('admin.restore') }}" enctype="multipart/form-data">
+        <form method="POST" action="{{ url_for('admin.restore') }}" enctype="multipart/form-data" id="restoreForm">
           <div class="input-group">
             <input type="file" name="backup_file" class="form-control" accept=".db">
-            <button type="submit" class="btn btn-outline-warning" onclick="return confirm('Restore database? This will overwrite all current data.')">
+            <button type="button" class="btn btn-outline-warning"
+                    onclick="showConfirm('Restore database? This will overwrite all current data and cannot be undone.', function(){ document.getElementById('restoreForm').submit(); })">
               Restore
             </button>
           </div>

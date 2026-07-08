@@ -160,10 +160,11 @@ async function saveChar() {
   else showToast(data.error || 'Save failed', 'error');
 }
 
-async function deleteChar(id, name) {
-  if (!confirm(`Delete character "${name}"?`)) return;
-  const resp = await fetch(`/project/${PROJECT_ID}/characters/${id}/delete`, {method:'POST'});
-  if ((await resp.json()).success) location.reload();
+function deleteChar(id, name) {
+  showConfirm(`Delete character "${name}"? This cannot be undone.`, async function() {
+    const resp = await fetch(`/project/${PROJECT_ID}/characters/${id}/delete`, {method:'POST'});
+    if ((await resp.json()).success) location.reload();
+  });
 }
 </script>
 {% endblock %}

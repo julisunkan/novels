@@ -37,8 +37,9 @@
                 <a href="{{ url_for('projects.project_detail', project_id=p.id) }}" class="btn btn-xs btn-outline-primary">
                   <i class="fas fa-external-link-alt"></i>
                 </a>
-                <form method="POST" action="{{ url_for('admin.delete_project', project_id=p.id) }}" style="display:inline">
-                  <button class="btn btn-xs btn-outline-danger" onclick="return confirm('Delete?')">
+                <form method="POST" action="{{ url_for('admin.delete_project', project_id=p.id) }}" style="display:inline" id="del-proj-{{ p.id }}">
+                  <button type="button" class="btn btn-xs btn-outline-danger"
+                          onclick="showConfirm('Delete this project? This cannot be undone.', function(){ document.getElementById('del-proj-{{ p.id }}').submit(); })">
                     <i class="fas fa-trash"></i>
                   </button>
                 </form>

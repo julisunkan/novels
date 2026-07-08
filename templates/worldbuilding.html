@@ -167,10 +167,11 @@ async function saveEntry() {
   if ((await resp.json()).success) { bootstrap.Modal.getInstance(document.getElementById('entryModal')).hide(); location.reload(); }
 }
 
-async function deleteEntry(id, name) {
-  if (!confirm(`Delete "${name}"?`)) return;
-  const resp = await fetch(`/project/${PROJECT_ID}/worldbuilding/${id}/delete`, {method:'POST'});
-  if ((await resp.json()).success) location.reload();
+function deleteEntry(id, name) {
+  showConfirm(`Delete "${name}"? This cannot be undone.`, async function() {
+    const resp = await fetch(`/project/${PROJECT_ID}/worldbuilding/${id}/delete`, {method:'POST'});
+    if ((await resp.json()).success) location.reload();
+  });
 }
 </script>
 {% endblock %}

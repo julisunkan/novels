@@ -167,29 +167,31 @@ Chapter {{ chapter.chapter_number }}
 const PROJECT_ID = {{ project.id }};
 const CHAPTER_ID = {{ chapter.id }};
 
-async function regenChapter() {
-  if (!confirm('Regenerate this chapter? The current content will be replaced.')) return;
-  const modal = new bootstrap.Modal(document.getElementById('regenModal'));
-  modal.show();
-  try {
-    const resp = await fetch(`/project/${PROJECT_ID}/chapter/${CHAPTER_ID}/regenerate`, {method:'POST'});
-    const data = await resp.json();
-    modal.hide();
-    if (data.error) { showToast(data.error, 'error'); return; }
-    showToast('Chapter regenerated!', 'success');
-    location.reload();
-  } catch(e) {
-    modal.hide();
-    showToast('Failed: ' + e.message, 'error');
-  }
+function regenChapter() {
+  showConfirm('Regenerate this chapter? The current content will be replaced.', async function() {
+    const modal = new bootstrap.Modal(document.getElementById('regenModal'));
+    modal.show();
+    try {
+      const resp = await fetch(`/project/${PROJECT_ID}/chapter/${CHAPTER_ID}/regenerate`, {method:'POST'});
+      const data = await resp.json();
+      modal.hide();
+      if (data.error) { showToast(data.error, 'error'); return; }
+      showToast('Chapter regenerated!', 'success');
+      location.reload();
+    } catch(e) {
+      modal.hide();
+      showToast('Failed: ' + e.message, 'error');
+    }
+  });
 }
 
-async function deleteChapter() {
-  if (!confirm('Permanently delete this chapter?')) return;
-  const resp = await fetch(`/project/${PROJECT_ID}/chapter/${CHAPTER_ID}/delete`, {method:'POST'});
-  if ((await resp.json()).success) {
-    window.location.href = `/project/${PROJECT_ID}`;
-  }
+function deleteChapter() {
+  showConfirm('Permanently delete this chapter? This cannot be undone.', async function() {
+    const resp = await fetch(`/project/${PROJECT_ID}/chapter/${CHAPTER_ID}/delete`, {method:'POST'});
+    if ((await resp.json()).success) {
+      window.location.href = `/project/${PROJECT_ID}`;
+    }
+  });
 }
 
 function copyToClipboard(text) {

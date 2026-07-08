@@ -8,8 +8,9 @@
     <h1 class="page-title">Generation Logs</h1>
     <p class="page-subtitle">{{ total }} total log entries</p>
   </div>
-  <form method="POST" action="{{ url_for('admin.clear_logs') }}" onsubmit="return confirm('Clear all logs?')">
-    <button type="submit" class="btn btn-outline-danger btn-sm">
+  <form method="POST" action="{{ url_for('admin.clear_logs') }}" id="clearLogsForm">
+    <button type="button" class="btn btn-outline-danger btn-sm"
+            onclick="showConfirm('Clear all logs? This cannot be undone.', function(){ document.getElementById('clearLogsForm').submit(); })">
       <i class="fas fa-trash me-1"></i>Clear All Logs
     </button>
   </form>

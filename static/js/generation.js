@@ -71,16 +71,17 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
-async function stopGeneration() {
-  if (!confirm('Stop generation? You can resume later from where you left off.')) return;
-  const projectId = getProjectId();
-  const data = await apiPost(`/project/${projectId}/generate/stop`);
-  if (data.success) {
-    showToast('Generation stopped. You can resume later.', 'warning');
-    stopPolling();
-    updateButtonStates('paused');
-    setStatusText('Stopped', 'fas fa-pause-circle');
-  }
+function stopGeneration() {
+  showConfirm('Stop generation? You can resume later from where you left off.', async function() {
+    const projectId = getProjectId();
+    const data = await apiPost(`/project/${projectId}/generate/stop`);
+    if (data.success) {
+      showToast('Generation stopped. You can resume later.', 'warning');
+      stopPolling();
+      updateButtonStates('paused');
+      setStatusText('Stopped', 'fas fa-pause-circle');
+    }
+  });
 }
 
 function startPolling(projectId) {

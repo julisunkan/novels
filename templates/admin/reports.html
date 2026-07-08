@@ -11,9 +11,9 @@
       <i class="fas fa-times me-1"></i>Clear Filter
     </a>
     {% endif %}
-    <form method="POST" action="{{ url_for('admin.clear_dismissed_reports') }}"
-          onsubmit="return confirm('Clear all dismissed/actioned reports?')">
-      <button type="submit" class="btn btn-outline-danger btn-sm">
+    <form method="POST" action="{{ url_for('admin.clear_dismissed_reports') }}" id="clearReportsForm">
+      <button type="button" class="btn btn-outline-danger btn-sm"
+              onclick="showConfirm('Clear all dismissed/actioned reports? This cannot be undone.', function(){ document.getElementById('clearReportsForm').submit(); })">
         <i class="fas fa-broom me-1"></i>Clear Resolved
       </button>
     </form>
@@ -200,17 +200,18 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   document.querySelectorAll('.btn-delete-report').forEach(btn => {
-    btn.addEventListener('click', async function() {
-      if (!confirm('Permanently delete this report?')) return;
+    btn.addEventListener('click', function() {
       const id = this.dataset.id;
-      const resp = await fetch(`/julisunkan/reports/${id}/delete`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+      showConfirm('Permanently delete this report? This cannot be undone.', async function() {
+        const resp = await fetch(`/julisunkan/reports/${id}/delete`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+        });
+        if ((await resp.json()).success) {
+          const row = document.getElementById('report-' + id);
+          if (row) row.remove();
+        }
       });
-      if ((await resp.json()).success) {
-        const row = document.getElementById('report-' + id);
-        if (row) row.remove();
-      }
     });
   });
 });

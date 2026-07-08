@@ -123,24 +123,26 @@
 const PROJECT_ID = {{ project.id }};
 let editingChapterId = null;
 
-document.getElementById('btnGenOutline').addEventListener('click', async function() {
-  if (!confirm('Generate a new AI outline? This will replace any existing outline.')) return;
-  document.getElementById('outlineLoading').style.display = 'block';
-  document.getElementById('outlineContainer').style.display = 'none';
-  this.disabled = true;
-  try {
-    const resp = await fetch(`/project/${PROJECT_ID}/outline/generate`, {method:'POST'});
-    const data = await resp.json();
-    if (data.error) { showToast(data.error, 'error'); return; }
-    showToast(`Generated ${data.count} chapters!`, 'success');
-    setTimeout(() => location.reload(), 500);
-  } catch(e) {
-    showToast('Generation failed: ' + e.message, 'error');
-  } finally {
-    document.getElementById('outlineLoading').style.display = 'none';
-    document.getElementById('outlineContainer').style.display = 'block';
-    this.disabled = false;
-  }
+document.getElementById('btnGenOutline').addEventListener('click', function() {
+  const btn = this;
+  showConfirm('Generate a new AI outline? This will replace any existing outline.', async function() {
+    document.getElementById('outlineLoading').style.display = 'block';
+    document.getElementById('outlineContainer').style.display = 'none';
+    btn.disabled = true;
+    try {
+      const resp = await fetch(`/project/${PROJECT_ID}/outline/generate`, {method:'POST'});
+      const data = await resp.json();
+      if (data.error) { showToast(data.error, 'error'); return; }
+      showToast(`Generated ${data.count} chapters!`, 'success');
+      setTimeout(() => location.reload(), 500);
+    } catch(e) {
+      showToast('Generation failed: ' + e.message, 'error');
+    } finally {
+      document.getElementById('outlineLoading').style.display = 'none';
+      document.getElementById('outlineContainer').style.display = 'block';
+      btn.disabled = false;
+    }
+  });
 });
 
 function addChapterModal() {
@@ -183,10 +185,11 @@ async function saveChapter() {
   }
 }
 
-async function deleteChapter(id) {
-  if (!confirm('Delete this chapter from the outline?')) return;
-  const resp = await fetch(`/project/${PROJECT_ID}/outline/chapter/${id}/delete`, {method:'POST'});
-  if ((await resp.json()).success) location.reload();
+function deleteChapter(id) {
+  showConfirm('Delete this chapter from the outline? This cannot be undone.', async function() {
+    const resp = await fetch(`/project/${PROJECT_ID}/outline/chapter/${id}/delete`, {method:'POST'});
+    if ((await resp.json()).success) location.reload();
+  });
 }
 
 async function duplicateChapter(id) {

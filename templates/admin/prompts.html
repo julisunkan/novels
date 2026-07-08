@@ -134,10 +134,11 @@ async function savePrompt(e, id) {
   if ((await resp.json()).success) showToast('Template saved!', 'success');
 }
 
-async function deletePrompt(id) {
-  if (!confirm('Delete this template?')) return;
-  const resp = await fetch(`/julisunkan/prompts/${id}/delete`, {method:'POST'});
-  if ((await resp.json()).success) location.reload();
+function deletePrompt(id) {
+  showConfirm('Delete this template? This cannot be undone.', async function() {
+    const resp = await fetch(`/julisunkan/prompts/${id}/delete`, {method:'POST'});
+    if ((await resp.json()).success) location.reload();
+  });
 }
 </script>
 {% endblock %}

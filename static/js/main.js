@@ -44,34 +44,74 @@ function closeSidebar() {
   }
 }
 
-// ===== TOAST NOTIFICATIONS =====
+// ===== INLINE NOTIFICATIONS =====
 function showToast(message, type = 'info', duration = 4000) {
-  const container = document.getElementById('toastContainer');
+  const container = document.getElementById('inlineNotifications');
   if (!container) return;
 
-  const id = 'toast-' + Date.now();
+  const id = 'notif-' + Date.now();
   const iconMap = {
-    success: 'fas fa-check-circle text-success',
-    error: 'fas fa-times-circle text-danger',
-    warning: 'fas fa-exclamation-triangle text-warning',
-    info: 'fas fa-info-circle text-info'
+    success: 'fas fa-check-circle',
+    error: 'fas fa-times-circle',
+    warning: 'fas fa-exclamation-triangle',
+    info: 'fas fa-info-circle'
   };
+  const alertType = type === 'error' ? 'danger' : type;
 
-  const toastEl = document.createElement('div');
-  toastEl.id = id;
-  toastEl.className = 'toast align-items-center show';
-  toastEl.setAttribute('role', 'alert');
-  toastEl.innerHTML = `
-    <div class="d-flex align-items-center">
-      <div class="toast-body d-flex align-items-center gap-2">
-        <i class="${iconMap[type] || iconMap.info}"></i>
-        <span>${message}</span>
-      </div>
-      <button type="button" class="btn-close me-2 ms-auto" onclick="this.closest('.toast').remove()"></button>
-    </div>
+  const el = document.createElement('div');
+  el.id = id;
+  el.className = `alert alert-${alertType} alert-dismissible fade show d-flex align-items-center gap-2 mb-2`;
+  el.setAttribute('role', 'alert');
+  el.innerHTML = `
+    <i class="${iconMap[type] || iconMap.info} flex-shrink-0"></i>
+    <span class="flex-grow-1">${message}</span>
+    <button type="button" class="btn-close" onclick="this.closest('.alert').remove()"></button>
   `;
-  container.appendChild(toastEl);
-  setTimeout(() => { if (document.getElementById(id)) toastEl.remove(); }, duration);
+  container.prepend(el);
+  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  if (duration > 0) {
+    setTimeout(() => {
+      if (document.getElementById(id)) {
+        el.classList.remove('show');
+        setTimeout(() => el.remove(), 300);
+      }
+    }, duration);
+  }
+}
+
+// ===== INLINE CONFIRM =====
+function showConfirm(message, onConfirm) {
+  const container = document.getElementById('inlineNotifications');
+  if (!container) {
+    if (window.confirm(message)) onConfirm();
+    return;
+  }
+
+  // Remove any existing confirm prompt
+  container.querySelectorAll('.inline-confirm').forEach(el => el.remove());
+
+  const id = 'confirm-' + Date.now();
+  const el = document.createElement('div');
+  el.id = id;
+  el.className = 'alert alert-warning inline-confirm d-flex align-items-center gap-3 mb-2';
+  el.setAttribute('role', 'alert');
+  el.innerHTML = `
+    <i class="fas fa-exclamation-triangle flex-shrink-0"></i>
+    <span class="flex-grow-1">${message}</span>
+    <button class="btn btn-sm btn-danger" id="${id}-ok">Yes, continue</button>
+    <button class="btn btn-sm btn-outline-secondary" id="${id}-no">Cancel</button>
+  `;
+  container.prepend(el);
+  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  document.getElementById(`${id}-ok`).onclick = function() {
+    el.remove();
+    onConfirm();
+  };
+  document.getElementById(`${id}-no`).onclick = function() {
+    el.remove();
+  };
 }
 
 // ===== CSRF PROTECTION =====
