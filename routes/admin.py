@@ -180,7 +180,10 @@ def delete_project(project_id):
 @admin_required
 def logs():
     db = get_db()
-    page = int(request.args.get('page', 1))
+    try:
+        page = max(1, int(request.args.get('page', 1)))
+    except (ValueError, TypeError):
+        page = 1
     per_page = 50
     offset = (page - 1) * per_page
     total = db.execute('SELECT COUNT(*) FROM generation_logs').fetchone()[0]
@@ -247,7 +250,10 @@ def restore():
 @admin_required
 def reports():
     db = get_db()
-    page = int(request.args.get('page', 1))
+    try:
+        page = max(1, int(request.args.get('page', 1)))
+    except (ValueError, TypeError):
+        page = 1
     status_filter = request.args.get('status', '')
     per_page = 25
     offset = (page - 1) * per_page

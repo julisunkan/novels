@@ -58,7 +58,7 @@
           <tr id="report-{{ r.id }}" class="{{ 'table-warning' if r.status == 'pending' else '' }}">
             <td class="text-muted small">{{ r.id }}</td>
             <td>
-              {% if r.chapter_id %}
+              {% if r.chapter_id and r.project_id %}
               <div class="fw-semibold small">
                 <a href="{{ url_for('chapters.chapter_view', project_id=r.project_id, chapter_id=r.chapter_id) }}"
                    target="_blank" class="text-decoration-none">
@@ -66,6 +66,11 @@
                 </a>
               </div>
               <div class="text-muted x-small">{{ r.project_title[:30] if r.project_title else '—' }}</div>
+              {% elif r.chapter_id %}
+              <div class="fw-semibold small text-muted">
+                Ch.{{ r.chapter_number }}: {{ r.chapter_title[:30] if r.chapter_title else '—' }}
+              </div>
+              <div class="text-muted x-small">(project deleted)</div>
               {% else %}
               <span class="text-muted small">—</span>
               {% endif %}
