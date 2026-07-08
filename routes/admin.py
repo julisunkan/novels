@@ -90,6 +90,12 @@ def settings():
                         'export_include_toc', 'export_include_page_numbers',
                         'export_include_headers', 'export_include_footers'],
             }
+            # Checkbox fields post nothing when unchecked, so they must default
+            # to '0' rather than being skipped (which would leave the old value).
+            _checkbox_fields = {
+                'maintenance_mode', 'export_include_toc', 'export_include_page_numbers',
+                'export_include_headers', 'export_include_footers',
+            }
             group = request.form.get('settings_group', '')
             fields = _groups.get(group, [])
             if not fields:
@@ -97,7 +103,10 @@ def settings():
                 allowed = {f for flist in _groups.values() for f in flist}
                 fields = [f for f in allowed if f in request.form]
             for field in fields:
-                set_setting(db, field, request.form.get(field, ''))
+                if field in _checkbox_fields:
+                    set_setting(db, field, '1' if request.form.get(field) else '0')
+                else:
+                    set_setting(db, field, request.form.get(field, ''))
             flash('Settings saved successfully.', 'success')
         return redirect(url_for('admin.settings'))
 

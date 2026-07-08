@@ -196,8 +196,10 @@ def _generation_worker(app, project_id):
                         provider=_provider
                     )
                     save_chapter_memory(db, chapter_id, memory_data)
-                except Exception:
-                    pass  # Memory generation is non-critical
+                except Exception as e:
+                    # Memory generation is non-critical, but still log it so
+                    # missing continuity context is diagnosable.
+                    app.logger.warning('Chapter memory generation failed (ch %s): %s', ch_num, e)
 
                 # Generate image prompt if needed
                 if project.get('include_images'):
@@ -216,8 +218,8 @@ def _generation_worker(app, project_id):
                             (project_id, chapter_id, img_prompt, project.get('image_style', 'Realistic'))
                         )
                         db.commit()
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        app.logger.warning('Image prompt generation failed (ch %s): %s', ch_num, e)
 
                 # Update project stats
                 total_words = db.execute(
@@ -282,15 +284,15 @@ def _generation_worker(app, project_id):
                     (project_id, 'chapter', 'error', f'Worker crash: {e}')
                 )
                 db.commit()
-            except Exception:
-                pass
+            except Exception as inner_e:
+                app.logger.error('Worker crash handler failed for project %s: %s', project_id, inner_e)
         finally:
             with _gen_lock:
                 _gen_state.pop(project_id, None)
             try:
                 db.close()
-            except Exception:
-                pass
+            except Exception as e:
+                app.logger.warning('Error closing worker DB connection for project %s: %s', project_id, e)
 
 
 @bp.route('/project/<int:project_id>/generate')
@@ -623,8 +625,8 @@ def regenerate_chapter(project_id, chapter_id):
                 provider=_rprovider
             )
             save_chapter_memory(db, chapter_id, memory_data)
-        except Exception:
-            pass
+        except Exception as e:
+            current_app.logger.warning('Chapter memory regeneration failed (ch %s): %s', chapter['chapter_number'], e)
         update_project_stats(db, project_id)
         return jsonify({'success': True, 'word_count': wc, 'content': content})
     except (GroqRateLimitError, GeminiError) as e:
