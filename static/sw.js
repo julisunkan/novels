@@ -1,5 +1,5 @@
 // KDP Novel & Storybook Creator — Service Worker
-const CACHE_NAME = 'novelai-v1';
+const CACHE_NAME = 'novelai-v2';
 const STATIC_ASSETS = [
   '/static/css/style.css',
   '/static/js/main.js',
