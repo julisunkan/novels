@@ -57,6 +57,17 @@ def _is_rate_limit(exc):
                                    'rate limit', 'too many requests'))
 
 
+def _is_permanent_quota_failure(exc):
+    """
+    Detect a non-retryable quota failure: the API key/project has NO quota at
+    all for this model (e.g. free tier unavailable, billing not enabled).
+    These report a hard 'limit: 0' and retrying only wastes time, since the
+    wait period never actually restores any quota.
+    """
+    msg = str(exc).lower()
+    return 'limit: 0' in msg or 'check your plan and billing' in msg
+
+
 def call_gemini(api_key, model, messages, temperature=0.7, top_p=0.9, max_tokens=4096):
     """
     Call the Gemini API and return (content, tokens_used, elapsed_seconds).
@@ -107,6 +118,18 @@ def call_gemini(api_key, model, messages, temperature=0.7, top_p=0.9, max_tokens
 
         except Exception as exc:
             if _is_rate_limit(exc):
+                if _is_permanent_quota_failure(exc):
+                    # Hard quota exhaustion (limit: 0) — retrying wastes time
+                    # since no wait period restores a zero quota. Surface the
+                    # real cause immediately instead of a generic message.
+                    raise GeminiError(
+                        'Gemini quota exceeded for this API key/model (limit: 0). '
+                        'This usually means the free tier is unavailable for your '
+                        'account or billing is not enabled. Check your plan at '
+                        'https://ai.google.dev/gemini-api/docs/rate-limits, or '
+                        'switch to a different model/provider in Admin Settings.'
+                    ) from exc
+
                 retry_secs = _parse_gemini_retry_seconds(str(exc))
 
                 if retry_secs is None:
