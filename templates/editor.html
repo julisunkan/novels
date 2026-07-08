@@ -7,107 +7,146 @@
 
 {% block topnav_actions %}
 <button class="btn btn-outline-secondary btn-sm me-2" data-bs-toggle="modal" data-bs-target="#searchModal">
-  <i class="fas fa-search me-1"></i>Find &amp; Replace
+  <i class="fas fa-search me-1"></i><span class="d-none d-md-inline">Find &amp; Replace</span>
 </button>
 {% endblock %}
 
 {% block content %}
+{% if chapters %}
 <div class="editor-layout">
-  <!-- Chapter Sidebar -->
+
+  <!-- ── Chapter Sidebar ─────────────────────────── -->
   <div class="editor-sidebar" id="editorSidebar">
     <div class="editor-sidebar-header">
-      <h6>Chapters</h6>
+      <div class="d-flex justify-content-between align-items-baseline mb-1">
+        <h6 class="mb-0">Chapters</h6>
+        <small class="text-muted">{{ chapters|length }} total</small>
+      </div>
       <div class="editor-wordcount">
-        <span id="totalWordCount">{{ '{:,}'.format(total_words) }}</span> words
-        <small class="text-muted d-block">{{ '{:,}'.format(target_words) }} target</small>
+        <div class="d-flex justify-content-between mb-1">
+          <span><span id="totalWordCount">{{ '{:,}'.format(total_words) }}</span> words</span>
+          <span class="text-muted" style="font-size:0.75rem">{{ '{:,}'.format(target_words) }} target</span>
+        </div>
+        <div class="editor-progress-track">
+          <div class="editor-progress-fill" id="progressFill"
+               style="width:{% if target_words > 0 %}{{ [[total_words / target_words * 100, 100]|min, 0]|max | round(1) }}{% else %}0{% endif %}%"></div>
+        </div>
       </div>
     </div>
-    <div class="editor-chapter-list">
-      {% if chapters %}
+
+    <div class="editor-chapter-filter-wrap">
+      <input type="text" id="chapterFilter" class="editor-chapter-filter"
+             placeholder="Filter chapters…" oninput="filterChapters(this.value)">
+    </div>
+
+    <div class="editor-chapter-list" id="chapterList">
       {% for ch in chapters %}
-      <button class="editor-chapter-btn {% if loop.first %}active{% endif %}"
+      <button class="editor-chapter-btn"
               id="chbtn-{{ ch.id }}"
-              onclick="loadChapter({{ ch.id }}, {{ ch.chapter_number }}, {{ ch.chapter_title | tojson }})">
+              data-id="{{ ch.id }}"
+              data-search="{{ ch.chapter_title | lower }}"
+              onclick="loadChapter({{ ch.id }})">
         <div class="ec-num">{{ ch.chapter_number }}</div>
         <div class="ec-info">
-          <div class="ec-title">{{ ch.chapter_title[:25] }}{% if ch.chapter_title|length > 25 %}…{% endif %}</div>
-          <div class="ec-words">{{ '{:,}'.format(ch.word_count) }} words</div>
+          <div class="ec-title">{{ ch.chapter_title }}</div>
+          <div class="ec-words" id="wc-{{ ch.id }}">{{ '{:,}'.format(ch.word_count) }} words</div>
         </div>
         <div class="ec-status-dot status-{{ ch.status }}"></div>
       </button>
       {% endfor %}
-      {% else %}
-      <p class="text-muted small px-3 py-2">No chapters yet. Generate chapters first.</p>
-      {% endif %}
     </div>
   </div>
 
-  <!-- Editor Area -->
+  <!-- ── Editor Main ─────────────────────────────── -->
   <div class="editor-main">
-    {% if chapters %}
+
+    <!-- Toolbar -->
     <div class="editor-toolbar">
-      <div class="editor-chapter-title" id="editorChapterTitle">
-        {{ chapters[0].chapter_title if chapters else 'Select a chapter' }}
+      <div class="d-flex align-items-center gap-2 min-w-0 flex-1">
+        <button class="btn btn-sm btn-outline-secondary editor-nav-btn"
+                id="btnPrevChapter" onclick="navigateChapter(-1)"
+                title="Previous chapter (Ctrl+[)" disabled>
+          <i class="fas fa-chevron-left"></i>
+        </button>
+        <div class="editor-chapter-title text-truncate" id="editorChapterTitle">—</div>
+        <button class="btn btn-sm btn-outline-secondary editor-nav-btn"
+                id="btnNextChapter" onclick="navigateChapter(1)"
+                title="Next chapter (Ctrl+])" disabled>
+          <i class="fas fa-chevron-right"></i>
+        </button>
       </div>
       <div class="editor-toolbar-right">
-        <span class="editor-wc" id="editorWordCount">{{ chapters[0].word_count if chapters else 0 }} words</span>
-        <span class="editor-cc" id="editorCharCount">0 chars</span>
-        <button class="btn btn-success btn-sm" id="saveBtn" onclick="saveCurrentChapter()">
-          <i class="fas fa-save me-1"></i>Save
+        <span class="editor-wc" id="editorWordCount">—</span>
+        <span class="editor-cc d-none d-lg-inline" id="editorCharCount"></span>
+        <button class="btn btn-success btn-sm" id="saveBtn" onclick="saveCurrentChapter()" disabled>
+          <i class="fas fa-save me-1" id="saveBtnIcon"></i><span id="saveBtnLabel">Save</span>
         </button>
-        <span class="autosave-indicator" id="autosaveIndicator">All changes saved</span>
+        <span class="autosave-indicator" id="autosaveIndicator"></span>
       </div>
     </div>
+
+    <!-- Format Bar -->
     <div class="editor-format-bar">
-      <select id="fontFamily" class="form-select form-select-sm" style="width:auto" onchange="applyFont()">
+      <select id="fontFamily" class="form-select form-select-sm" style="width:auto" onchange="applyFont(true)">
         <option value="Georgia">Georgia</option>
         <option value="'Times New Roman'">Times New Roman</option>
         <option value="Arial">Arial</option>
         <option value="'Courier New'">Courier New</option>
         <option value="Inter">Inter</option>
       </select>
-      <select id="fontSize" class="form-select form-select-sm" style="width:auto" onchange="applyFontSize()">
+      <select id="fontSize" class="form-select form-select-sm" style="width:auto" onchange="applyFontSize(true)">
         <option value="14">14px</option>
         <option value="16" selected>16px</option>
         <option value="18">18px</option>
         <option value="20">20px</option>
         <option value="22">22px</option>
       </select>
-      <select id="lineHeight" class="form-select form-select-sm" style="width:auto" onchange="applyLineHeight()">
-        <option value="1.5">1.5x</option>
-        <option value="1.8" selected>1.8x</option>
-        <option value="2.0">2.0x</option>
-        <option value="2.5">2.5x</option>
+      <select id="lineHeight" class="form-select form-select-sm" style="width:auto" onchange="applyLineHeight(true)">
+        <option value="1.5">1.5×</option>
+        <option value="1.8" selected>1.8×</option>
+        <option value="2.0">2.0×</option>
+        <option value="2.5">2.5×</option>
       </select>
-      <button class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('editorArea').style.textAlign='left'">
+      <div class="vr d-none d-md-block mx-1"></div>
+      <button class="btn btn-sm btn-outline-secondary" onclick="setAlign('left')" title="Align left">
         <i class="fas fa-align-left"></i>
       </button>
-      <button class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('editorArea').style.textAlign='justify'">
+      <button class="btn btn-sm btn-outline-secondary" onclick="setAlign('justify')" title="Justify">
         <i class="fas fa-align-justify"></i>
       </button>
+      <small class="ms-auto d-none d-xl-flex align-items-center gap-1 text-muted">
+        <i class="fas fa-keyboard me-1"></i>
+        Ctrl+S save &nbsp;·&nbsp; Ctrl+[ / ] navigate &nbsp;·&nbsp; Ctrl+F find
+      </small>
     </div>
-    <div class="editor-content-wrap">
-      <textarea id="editorArea" class="editor-textarea"
-                oninput="onEditorInput()"
-                spellcheck="true">{{ chapters[0].content if chapters else '' }}</textarea>
-    </div>
-    <input type="hidden" id="currentChapterId" value="{{ chapters[0].id if chapters else '' }}">
-    <input type="hidden" id="currentProjectId" value="{{ project.id }}">
-    <input type="hidden" id="activeChapterId" value="{{ active_chapter_id or '' }}">
-    {% else %}
-    <div class="empty-state">
-      <div class="empty-icon"><i class="fas fa-pen-fancy"></i></div>
-      <h3>No chapters to edit</h3>
-      <p>Generate chapters first, then come back to the editor.</p>
-      <a href="{{ url_for('chapters.generation_page', project_id=project.id) }}" class="btn btn-primary">
-        <i class="fas fa-robot me-2"></i>Generate Chapters
-      </a>
-    </div>
-    {% endif %}
-  </div>
-</div>
 
-<!-- Search & Replace Modal -->
+    <!-- Content Area -->
+    <div class="editor-content-wrap">
+      <div class="editor-load-overlay" id="editorLoadOverlay">
+        <div class="spinner-border text-primary mb-2" role="status"></div>
+        <p class="text-muted mb-0 small">Loading chapter…</p>
+      </div>
+      <textarea id="editorArea" class="editor-textarea"
+                spellcheck="true" oninput="onEditorInput()"
+                placeholder="Select a chapter from the sidebar to start editing…"
+                disabled></textarea>
+    </div>
+
+  </div><!-- /editor-main -->
+</div><!-- /editor-layout -->
+
+{% else %}
+<div class="empty-state mt-5">
+  <div class="empty-icon"><i class="fas fa-pen-fancy"></i></div>
+  <h3>No chapters to edit</h3>
+  <p>Generate chapters first, then come back to the editor.</p>
+  <a href="{{ url_for('chapters.generation_page', project_id=project.id) }}" class="btn btn-primary">
+    <i class="fas fa-robot me-2"></i>Generate Chapters
+  </a>
+</div>
+{% endif %}
+
+<!-- Find & Replace Modal -->
 <div class="modal fade" id="searchModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
@@ -122,7 +161,7 @@
         </div>
         <div class="mb-3">
           <label class="form-label">Replace with</label>
-          <input type="text" id="replaceInput" class="form-control" placeholder="Replacement text">
+          <input type="text" id="replaceInput" class="form-control" placeholder="Replacement text (leave blank to delete)">
         </div>
         <div class="d-flex gap-3">
           <div class="form-check">
@@ -138,12 +177,8 @@
       </div>
       <div class="modal-footer border-0">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-        <button type="button" class="btn btn-outline-primary" onclick="doReplace(false)">
-          Replace First
-        </button>
-        <button type="button" class="btn btn-primary" onclick="doReplace(true)">
-          Replace All
-        </button>
+        <button type="button" class="btn btn-outline-primary" onclick="doReplace(false)">Replace First</button>
+        <button type="button" class="btn btn-primary" onclick="doReplace(true)">Replace All</button>
       </div>
     </div>
   </div>
@@ -151,5 +186,16 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{{ url_for('static', filename='js/editor.js') }}"></script>
+<script>
+// Chapter index passed from server — enables JS navigation without DOM queries
+const PROJECT_ID = {{ project.id }};
+const TARGET_WORDS = {{ target_words }};
+const ACTIVE_CHAPTER_ID = {{ active_chapter_id or 'null' }};
+const CHAPTERS_DATA = [
+  {% for ch in chapters %}
+  {"id":{{ ch.id }},"num":{{ ch.chapter_number }},"title":{{ ch.chapter_title | tojson }},"words":{{ ch.word_count }},"status":{{ ch.status | tojson }}}{% if not loop.last %},{% endif %}
+  {% endfor %}
+];
+</script>
+<script src="{{ url_for('static', filename='js/editor.js') }}?v=3"></script>
 {% endblock %}
