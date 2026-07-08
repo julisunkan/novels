@@ -7,16 +7,64 @@ from google.genai import types
 
 
 class GeminiError(Exception):
-    """Raised when the Gemini API returns an unrecoverable error."""
+    """Raised when the Gemini API returns a rate-limit error with a long wait."""
     def __init__(self, message, retry_after_seconds=None):
         super().__init__(message)
         self.retry_after_seconds = retry_after_seconds
 
 
+# Auto-retry threshold: waits up to this many seconds are handled transparently.
+_AUTO_RETRY_MAX_SECONDS = 65
+_AUTO_RETRY_ATTEMPTS = 3
+_BASE_BACKOFF = 5  # seconds — used when no retry-after is parseable
+
+
+def _parse_gemini_retry_seconds(error_str):
+    """
+    Try to extract a retry-after duration from a Gemini 429 error message.
+    Gemini errors may include 'retry_delay { seconds: N }' or 'Retry after Xs'.
+    Returns float seconds, or None if unparseable.
+    """
+    # 'retry_delay { seconds: 30 }' style
+    m = re.search(r'retry_delay\s*\{\s*seconds:\s*(\d+)', str(error_str))
+    if m:
+        return float(m.group(1))
+    # 'retryDelay: "30s"' or 'retry after 30s' style
+    m = re.search(r'retry[_\s-]?(?:after|delay)[:\s]+(\d+(?:\.\d+)?)\s*s', str(error_str), re.I)
+    if m:
+        return float(m.group(1))
+    # 'X minutes Y seconds' style
+    m = re.search(r'(?:(\d+)\s*m(?:in)?)?\s*(\d+(?:\.\d+)?)\s*s(?:ec)?', str(error_str), re.I)
+    if m and (m.group(1) or m.group(2)):
+        minutes = int(m.group(1)) if m.group(1) else 0
+        secs = float(m.group(2)) if m.group(2) else 0
+        return minutes * 60 + secs
+    return None
+
+
+def _format_wait(seconds):
+    """Return a human-readable wait string, e.g. '6 min 18 s' or '45 s'."""
+    if seconds is None:
+        return 'a few minutes'
+    m = int(seconds // 60)
+    s = int(seconds % 60)
+    return f'{m} min {s} s' if m else f'{s} s'
+
+
+def _is_rate_limit(exc):
+    msg = str(exc).lower()
+    return any(k in msg for k in ('429', 'quota', 'resource has been exhausted',
+                                   'rate limit', 'too many requests'))
+
+
 def call_gemini(api_key, model, messages, temperature=0.7, top_p=0.9, max_tokens=4096):
     """
     Call the Gemini API and return (content, tokens_used, elapsed_seconds).
-    messages is a list of {'role': 'system'|'user'|'assistant', 'content': str}.
+
+    Rate-limit behaviour (mirrors Groq service):
+      - Wait ≤ 65 s  → sleep the exact amount and retry (up to 3 attempts).
+      - Wait  > 65 s → raise GeminiError with a friendly wait message.
+    Other API errors are re-raised as GeminiError.
     """
     client = genai.Client(api_key=api_key)
 
@@ -29,7 +77,6 @@ def call_gemini(api_key, model, messages, temperature=0.7, top_p=0.9, max_tokens
         elif msg['role'] == 'user':
             contents.append(msg['content'])
         else:
-            # assistant messages — append as model turn
             contents.append(types.Content(
                 role='model',
                 parts=[types.Part(text=msg['content'])]
@@ -43,27 +90,49 @@ def call_gemini(api_key, model, messages, temperature=0.7, top_p=0.9, max_tokens
     if system_instruction:
         config.system_instruction = system_instruction
 
-    start = time.time()
-    try:
-        response = client.models.generate_content(
-            model=model,
-            contents=contents,
-            config=config,
-        )
-    except Exception as exc:
-        msg_lower = str(exc).lower()
-        if 'quota' in msg_lower or 'rate' in msg_lower or '429' in msg_lower:
-            raise GeminiError(
-                f'Gemini rate limit reached. Please wait a moment and try again.'
-            ) from exc
-        raise GeminiError(str(exc)) from exc
+    for attempt in range(_AUTO_RETRY_ATTEMPTS):
+        start = time.time()
+        try:
+            response = client.models.generate_content(
+                model=model,
+                contents=contents,
+                config=config,
+            )
+            elapsed = time.time() - start
+            content = response.text or ''
+            tokens = 0
+            if hasattr(response, 'usage_metadata') and response.usage_metadata:
+                tokens = getattr(response.usage_metadata, 'total_token_count', 0) or 0
+            return content, tokens, elapsed
 
-    elapsed = time.time() - start
-    content = response.text or ''
-    tokens = 0
-    if hasattr(response, 'usage_metadata') and response.usage_metadata:
-        tokens = getattr(response.usage_metadata, 'total_token_count', 0) or 0
-    return content, tokens, elapsed
+        except Exception as exc:
+            if _is_rate_limit(exc):
+                retry_secs = _parse_gemini_retry_seconds(str(exc))
+
+                if retry_secs is None:
+                    # No wait time found — use exponential backoff for short attempts
+                    backoff = _BASE_BACKOFF * (2 ** attempt)
+                    if backoff <= _AUTO_RETRY_MAX_SECONDS:
+                        time.sleep(backoff)
+                        continue
+                    retry_secs = backoff  # for the error message
+
+                if retry_secs <= _AUTO_RETRY_MAX_SECONDS:
+                    time.sleep(retry_secs + 2)  # +2 s buffer
+                    continue
+
+                wait_str = _format_wait(retry_secs)
+                raise GeminiError(
+                    f'Gemini rate limit reached. Please try again in {wait_str}.',
+                    retry_after_seconds=retry_secs,
+                ) from exc
+
+            raise GeminiError(str(exc)) from exc
+
+    raise GeminiError(
+        f'Gemini rate limit persists after {_AUTO_RETRY_ATTEMPTS} retries. '
+        'Wait a minute and resume generation.'
+    )
 
 
 def generate_titles(api_key, model, project_info, temperature=0.9, top_p=0.9, max_tokens=1024):
