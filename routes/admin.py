@@ -80,14 +80,24 @@ def settings():
             else:
                 flash('Password must be at least 6 characters.', 'error')
         else:
-            fields = ['groq_api_key', 'groq_model', 'groq_temperature', 'groq_top_p',
-                      'groq_max_tokens', 'app_name', 'app_footer', 'default_theme',
-                      'default_font', 'maintenance_mode', 'export_include_toc',
-                      'export_include_page_numbers', 'export_include_headers',
-                      'export_include_footers']
+            # Each form declares a settings_group so only its own fields are updated.
+            # This prevents one form from blanking another form's keys.
+            _groups = {
+                'provider': ['active_provider'],
+                'groq': ['groq_api_key', 'groq_model', 'groq_temperature', 'groq_top_p', 'groq_max_tokens'],
+                'gemini': ['gemini_api_key', 'gemini_model'],
+                'app': ['app_name', 'app_footer', 'default_theme', 'default_font', 'maintenance_mode',
+                        'export_include_toc', 'export_include_page_numbers',
+                        'export_include_headers', 'export_include_footers'],
+            }
+            group = request.form.get('settings_group', '')
+            fields = _groups.get(group, [])
+            if not fields:
+                # Fallback: update any allowed field present in the form
+                allowed = {f for flist in _groups.values() for f in flist}
+                fields = [f for f in allowed if f in request.form]
             for field in fields:
-                val = request.form.get(field, '')
-                set_setting(db, field, val)
+                set_setting(db, field, request.form.get(field, ''))
             flash('Settings saved successfully.', 'success')
         return redirect(url_for('admin.settings'))
 
@@ -103,7 +113,15 @@ def settings():
         ('llama3-groq-70b-8192-tool-use-preview', 'LLaMA 3 Groq 70B Tool Use'),
         ('gemma2-9b-it', 'Gemma 2 9B'),
     ]
-    return render_template('admin/settings.html', s=current_settings, groq_models=groq_models)
+    gemini_models = [
+        ('gemini-2.0-flash', 'Gemini 2.0 Flash (Recommended)'),
+        ('gemini-2.0-flash-lite', 'Gemini 2.0 Flash Lite (Fast)'),
+        ('gemini-2.5-flash', 'Gemini 2.5 Flash'),
+        ('gemini-1.5-pro', 'Gemini 1.5 Pro'),
+        ('gemini-1.5-flash', 'Gemini 1.5 Flash'),
+    ]
+    return render_template('admin/settings.html', s=current_settings,
+                           groq_models=groq_models, gemini_models=gemini_models)
 
 
 @bp.route('/prompts', methods=['GET'])
@@ -341,10 +359,31 @@ def test_groq():
     api_key = get_setting(db, 'groq_api_key')
     model = get_setting(db, 'groq_model', 'llama-3.3-70b-versatile')
     if not api_key:
-        return jsonify({'error': 'No API key configured.'}), 400
+        return jsonify({'error': 'No Groq API key configured.'}), 400
     from services.groq_service import call_groq
     try:
         content, tokens, elapsed = call_groq(
+            api_key, model,
+            [{'role': 'user', 'content': 'Say "Connection successful!" in exactly 3 words.'}],
+            0.1, 0.9, 50
+        )
+        return jsonify({'success': True, 'response': content.strip(), 'tokens': tokens, 'time': round(elapsed, 2)})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@bp.route('/test-gemini', methods=['POST'])
+@admin_required
+def test_gemini():
+    """Test the Gemini API connection."""
+    db = get_db()
+    api_key = get_setting(db, 'gemini_api_key')
+    model = get_setting(db, 'gemini_model', 'gemini-2.0-flash')
+    if not api_key:
+        return jsonify({'error': 'No Gemini API key configured.'}), 400
+    from services.gemini_service import call_gemini
+    try:
+        content, tokens, elapsed = call_gemini(
             api_key, model,
             [{'role': 'user', 'content': 'Say "Connection successful!" in exactly 3 words.'}],
             0.1, 0.9, 50

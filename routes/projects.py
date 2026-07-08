@@ -3,7 +3,7 @@ import json
 from flask import Blueprint, render_template, request, redirect, url_for, jsonify, flash
 from database import get_db
 from utils.helpers import get_setting, log_history, update_project_stats, safe_filename
-from services.groq_service import generate_titles
+from services import ai_service
 
 bp = Blueprint('projects', __name__)
 
@@ -44,12 +44,12 @@ GROQ_MODELS = [
 @bp.route('/project/new')
 def new_project():
     db = get_db()
-    groq_configured = bool(get_setting(db, 'groq_api_key'))
+    ai_configured = ai_service.is_configured(db)
     return render_template('project_new.html',
                            genres=GENRES, story_types=STORY_TYPES, pov_options=POV_OPTIONS,
                            tenses=TENSES, styles=STYLES, tones=TONES, audiences=AUDIENCES,
                            languages=LANGUAGES, image_styles=IMAGE_STYLES,
-                           creativity=CREATIVITY, groq_configured=groq_configured)
+                           creativity=CREATIVITY, groq_configured=ai_configured)
 
 
 @bp.route('/project/create', methods=['POST'])
@@ -125,7 +125,7 @@ def project_detail(project_id):
     total_words = sum(c['word_count'] for c in chapters)
     target_words = (project['num_chapters'] or 10) * (project['words_per_chapter'] or 2000)
     progress = int((generated_count / project['num_chapters'] * 100)) if project['num_chapters'] else 0
-    groq_configured = bool(get_setting(db, 'groq_api_key'))
+    groq_configured = ai_service.is_configured(db)
     return render_template('project_detail.html',
                            project=project, chapters=chapters, outline=outline,
                            char_count=char_count, world_count=world_count,
@@ -213,12 +213,11 @@ def ajax_generate_titles(project_id):
     project = db.execute('SELECT * FROM projects WHERE id = ?', (project_id,)).fetchone()
     if not project:
         return jsonify({'error': 'Project not found'}), 404
-    api_key = get_setting(db, 'groq_api_key')
-    if not api_key:
-        return jsonify({'error': 'Groq API key not configured. Visit Admin Settings.'}), 400
-    model = get_setting(db, 'groq_model', 'llama-3.3-70b-versatile')
+    cfg = ai_service.get_active_config(db)
+    if not cfg['api_key']:
+        return jsonify({'error': 'AI API key not configured. Visit Admin Settings.'}), 400
     try:
-        data, tokens, elapsed = generate_titles(api_key, model, dict(project))
+        data, tokens, elapsed = ai_service.generate_titles(cfg['api_key'], cfg['model'], dict(project), provider=cfg['provider'])
         return jsonify({'success': True, 'data': data, 'tokens': tokens})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -230,13 +229,11 @@ def ajax_generate_cover_prompt(project_id):
     project = db.execute('SELECT * FROM projects WHERE id = ?', (project_id,)).fetchone()
     if not project:
         return jsonify({'error': 'Project not found'}), 404
-    api_key = get_setting(db, 'groq_api_key')
-    if not api_key:
-        return jsonify({'error': 'Groq API key not configured.'}), 400
-    model = get_setting(db, 'groq_model', 'llama-3.3-70b-versatile')
-    from services.groq_service import generate_cover_prompt
+    cfg = ai_service.get_active_config(db)
+    if not cfg['api_key']:
+        return jsonify({'error': 'AI API key not configured.'}), 400
     try:
-        prompt, tokens, _ = generate_cover_prompt(api_key, model, dict(project))
+        prompt, tokens, _ = ai_service.generate_cover_prompt(cfg['api_key'], cfg['model'], dict(project), provider=cfg['provider'])
         db.execute('UPDATE projects SET cover_prompt=? WHERE id=?', (prompt, project_id))
         db.commit()
         return jsonify({'success': True, 'prompt': prompt})

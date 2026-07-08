@@ -2,7 +2,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, jsonify
 from database import get_db
 from utils.helpers import get_setting, log_history
-from services.groq_service import generate_outline
+from services import ai_service
 from services.memory_service import build_full_prompt_context
 
 bp = Blueprint('outline', __name__)
@@ -18,7 +18,7 @@ def outline_page(project_id):
         'SELECT * FROM outline WHERE project_id = ? ORDER BY order_index, chapter_number',
         (project_id,)
     ).fetchall()
-    groq_configured = bool(get_setting(db, 'groq_api_key'))
+    ai_configured = ai_service.is_configured(db)
     # Build a mapping of chapter_number → generated chapter id so the template
     # can link the edit icon directly to the editor when content exists.
     gen_rows = db.execute(
@@ -27,7 +27,7 @@ def outline_page(project_id):
     ).fetchall()
     generated_map = {row['chapter_number']: row['id'] for row in gen_rows}
     return render_template('outline.html', project=project, chapters=chapters,
-                           groq_configured=groq_configured, generated_map=generated_map)
+                           groq_configured=ai_configured, generated_map=generated_map)
 
 
 @bp.route('/project/<int:project_id>/outline/generate', methods=['POST'])
@@ -36,10 +36,11 @@ def generate_outline_ajax(project_id):
     project = db.execute('SELECT * FROM projects WHERE id = ?', (project_id,)).fetchone()
     if not project:
         return jsonify({'error': 'Project not found'}), 404
-    api_key = get_setting(db, 'groq_api_key')
+    cfg = ai_service.get_active_config(db)
+    api_key = cfg['api_key']
     if not api_key:
-        return jsonify({'error': 'Groq API key not configured. Visit /julisunkan to set it up.'}), 400
-    model = get_setting(db, 'groq_model', 'llama-3.3-70b-versatile')
+        return jsonify({'error': 'AI API key not configured. Visit /julisunkan to set it up.'}), 400
+    model = cfg['model']
 
     # Get genre template
     template = db.execute(
@@ -53,9 +54,10 @@ def generate_outline_ajax(project_id):
     chars_ctx, world_ctx, _ = build_full_prompt_context(db, project_id)
 
     try:
-        chapters_data, tokens, elapsed = generate_outline(
+        chapters_data, tokens, elapsed = ai_service.generate_outline(
             api_key, model, dict(project), chars_ctx, world_ctx, template_dict,
-            project['temperature'], project['top_p'], project['max_tokens']
+            project['temperature'], project['top_p'], project['max_tokens'],
+            provider=cfg['provider']
         )
         # Clear existing outline
         db.execute('DELETE FROM outline WHERE project_id = ?', (project_id,))

@@ -5,8 +5,9 @@ from flask import Blueprint, render_template, request, redirect, url_for, jsonif
 from database import get_db, get_raw_db
 from utils.helpers import (get_setting, log_history, update_project_stats,
                             count_words, increment_statistic)
-from services.groq_service import (generate_chapter, generate_chapter_memory,
-                                   generate_image_prompt, GroqRateLimitError)
+from services import ai_service
+from services.groq_service import GroqRateLimitError
+from services.gemini_service import GeminiError
 from services.memory_service import build_full_prompt_context, save_chapter_memory
 
 bp = Blueprint('chapters', __name__)
@@ -39,8 +40,14 @@ def _generation_worker(app, project_id):
 
         try:
             project = dict(db.execute('SELECT * FROM projects WHERE id=?', (project_id,)).fetchone())
-            api_key = db.execute("SELECT value FROM settings WHERE key='groq_api_key'").fetchone()['value']
-            model = db.execute("SELECT value FROM settings WHERE key='groq_model'").fetchone()['value']
+            _provider_row = db.execute("SELECT value FROM settings WHERE key='active_provider'").fetchone()
+            _provider = _provider_row['value'] if _provider_row else 'groq'
+            if _provider == 'gemini':
+                api_key = db.execute("SELECT value FROM settings WHERE key='gemini_api_key'").fetchone()['value']
+                model = db.execute("SELECT value FROM settings WHERE key='gemini_model'").fetchone()['value']
+            else:
+                api_key = db.execute("SELECT value FROM settings WHERE key='groq_api_key'").fetchone()['value']
+                model = db.execute("SELECT value FROM settings WHERE key='groq_model'").fetchone()['value']
             template = _get_template(db, project['genre'])
 
             # Get outline chapters
@@ -114,12 +121,13 @@ def _generation_worker(app, project_id):
                 # Generate chapter content
                 start_time = time.time()
                 try:
-                    content, tokens, elapsed = generate_chapter(
+                    content, tokens, elapsed = ai_service.generate_chapter(
                         api_key, model, project,
                         dict(outline_ch), chars_ctx, world_ctx, memory_ctx,
-                        template, project['temperature'], project['top_p'], project['max_tokens']
+                        template, project['temperature'], project['top_p'], project['max_tokens'],
+                        provider=_provider
                     )
-                except GroqRateLimitError as e:
+                except (GroqRateLimitError, GeminiError) as e:
                     # Daily/minute token limit hit — pause the whole run so the
                     # user can resume after the wait period.
                     db.execute(
@@ -183,8 +191,9 @@ def _generation_worker(app, project_id):
 
                 # Generate memory
                 try:
-                    memory_data, mem_tokens, _ = generate_chapter_memory(
-                        api_key, model, outline_ch['chapter_title'], content, project['genre']
+                    memory_data, mem_tokens, _ = ai_service.generate_chapter_memory(
+                        api_key, model, outline_ch['chapter_title'], content, project['genre'],
+                        provider=_provider
                     )
                     save_chapter_memory(db, chapter_id, memory_data)
                 except Exception:
@@ -196,10 +205,11 @@ def _generation_worker(app, project_id):
                         ch_summary = db.execute(
                             'SELECT summary FROM chapters WHERE id=?', (chapter_id,)
                         ).fetchone()
-                        img_prompt, _, _ = generate_image_prompt(
+                        img_prompt, _, _ = ai_service.generate_image_prompt(
                             api_key, model, outline_ch['chapter_title'],
                             ch_summary['summary'] if ch_summary else '',
-                            project.get('image_style', 'Realistic'), project['genre']
+                            project.get('image_style', 'Realistic'), project['genre'],
+                            provider=_provider
                         )
                         db.execute(
                             'INSERT INTO images (project_id, chapter_id, prompt, style) VALUES (?,?,?,?)',
@@ -295,9 +305,9 @@ def generation_page(project_id):
     chapters = db.execute(
         'SELECT * FROM chapters WHERE project_id=? ORDER BY chapter_number', (project_id,)
     ).fetchall()
-    groq_configured = bool(get_setting(db, 'groq_api_key'))
+    ai_configured = ai_service.is_configured(db)
     return render_template('generation.html', project=project, outline=outline,
-                           chapters=chapters, groq_configured=groq_configured)
+                           chapters=chapters, groq_configured=ai_configured)
 
 
 @bp.route('/project/<int:project_id>/generate/start', methods=['POST'])
@@ -306,9 +316,8 @@ def start_generation(project_id):
     project = db.execute('SELECT * FROM projects WHERE id=?', (project_id,)).fetchone()
     if not project:
         return jsonify({'error': 'Project not found'}), 404
-    api_key = get_setting(db, 'groq_api_key')
-    if not api_key:
-        return jsonify({'error': 'Groq API key not configured. Visit /julisunkan to set it up.'}), 400
+    if not ai_service.is_configured(db):
+        return jsonify({'error': 'AI API key not configured. Visit /julisunkan to set it up.'}), 400
     outline = db.execute('SELECT COUNT(*) FROM outline WHERE project_id=?', (project_id,)).fetchone()[0]
     if not outline:
         return jsonify({'error': 'Generate an outline first before starting chapter generation.'}), 400
@@ -355,9 +364,8 @@ def resume_generation(project_id):
             return jsonify({'success': True, 'status': 'generating'})
 
     # Thread is not running — start fresh (will resume from last completed chapter)
-    api_key = get_setting(db, 'groq_api_key')
-    if not api_key:
-        return jsonify({'error': 'Groq API key not configured.'}), 400
+    if not ai_service.is_configured(db):
+        return jsonify({'error': 'AI API key not configured. Visit /julisunkan to set it up.'}), 400
 
     with _gen_lock:
         _gen_state[project_id] = {'stop': False, 'pause': False, 'thread': None}
@@ -483,11 +491,12 @@ def generate_single_chapter(project_id, chapter_number):
         if not outline_ch:
             return jsonify({'error': 'Chapter not found in outline'}), 404
 
-        api_key = get_setting(db, 'groq_api_key')
-        if not api_key:
-            return jsonify({'error': 'Groq API key not configured.'}), 400
+        _cfg = ai_service.get_active_config(db)
+        if not _cfg['api_key']:
+            return jsonify({'error': 'AI API key not configured. Visit /julisunkan to set it up.'}), 400
 
-        model = get_setting(db, 'groq_model', 'llama-3.3-70b-versatile')
+        api_key, model = _cfg['api_key'], _cfg['model']
+        _single_provider = _cfg['provider']
         template = _get_template(db, project['genre'])
         outline_ch = dict(outline_ch)
 
@@ -515,12 +524,13 @@ def generate_single_chapter(project_id, chapter_number):
 
         # --- Content generation (critical) ---
         try:
-            content, tokens, elapsed = generate_chapter(
+            content, tokens, elapsed = ai_service.generate_chapter(
                 api_key, model, dict(project), outline_ch,
                 chars_ctx, world_ctx, memory_ctx, template,
-                project['temperature'], project['top_p'], project['max_tokens']
+                project['temperature'], project['top_p'], project['max_tokens'],
+                provider=_single_provider
             )
-        except GroqRateLimitError as e:
+        except (GroqRateLimitError, GeminiError) as e:
             db.execute(
                 "UPDATE chapters SET status='pending', updated_at=CURRENT_TIMESTAMP WHERE id=?",
                 (chapter_id,)
@@ -545,8 +555,9 @@ def generate_single_chapter(project_id, chapter_number):
 
         # --- Memory generation (non-critical: failure keeps chapter as generated) ---
         try:
-            memory_data, _, _ = generate_chapter_memory(
-                api_key, model, outline_ch['chapter_title'], content, project['genre']
+            memory_data, _, _ = ai_service.generate_chapter_memory(
+                api_key, model, outline_ch['chapter_title'], content, project['genre'],
+                provider=_single_provider
             )
             save_chapter_memory(db, chapter_id, memory_data)
         except Exception as e:
@@ -567,9 +578,9 @@ def regenerate_chapter(project_id, chapter_id):
     chapter = db.execute('SELECT * FROM chapters WHERE id=? AND project_id=?', (chapter_id, project_id)).fetchone()
     if not project or not chapter:
         return jsonify({'error': 'Not found'}), 404
-    api_key = get_setting(db, 'groq_api_key')
-    if not api_key:
-        return jsonify({'error': 'Groq API key not configured.'}), 400
+    _rcfg = ai_service.get_active_config(db)
+    if not _rcfg['api_key']:
+        return jsonify({'error': 'AI API key not configured. Visit /julisunkan to set it up.'}), 400
 
     outline_ch = db.execute(
         'SELECT * FROM outline WHERE project_id=? AND chapter_number=?',
@@ -586,16 +597,18 @@ def regenerate_chapter(project_id, chapter_id):
     else:
         outline_ch = dict(outline_ch)
 
-    model = get_setting(db, 'groq_model', 'llama-3.3-70b-versatile')
+    api_key, model = _rcfg['api_key'], _rcfg['model']
+    _rprovider = _rcfg['provider']
     template = _get_template(db, project['genre'])
     chars_ctx, world_ctx, memory_ctx = build_full_prompt_context(
         db, project_id, chapter_number=chapter['chapter_number']
     )
     try:
-        content, tokens, elapsed = generate_chapter(  # noqa: E501
+        content, tokens, elapsed = ai_service.generate_chapter(
             api_key, model, dict(project), outline_ch,
             chars_ctx, world_ctx, memory_ctx, template,
-            project['temperature'], project['top_p'], project['max_tokens']
+            project['temperature'], project['top_p'], project['max_tokens'],
+            provider=_rprovider
         )
         wc = count_words(content)
         db.execute(
@@ -605,15 +618,16 @@ def regenerate_chapter(project_id, chapter_id):
         db.commit()
         # Regenerate memory (best-effort — don't fail the response if this errors)
         try:
-            memory_data, _, _ = generate_chapter_memory(
-                api_key, model, chapter['chapter_title'], content, project['genre']
+            memory_data, _, _ = ai_service.generate_chapter_memory(
+                api_key, model, chapter['chapter_title'], content, project['genre'],
+                provider=_rprovider
             )
             save_chapter_memory(db, chapter_id, memory_data)
         except Exception:
             pass
         update_project_stats(db, project_id)
         return jsonify({'success': True, 'word_count': wc, 'content': content})
-    except GroqRateLimitError as e:
+    except (GroqRateLimitError, GeminiError) as e:
         return jsonify({'error': str(e)}), 429
     except Exception as e:
         return jsonify({'error': str(e)}), 500
