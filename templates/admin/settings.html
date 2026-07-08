@@ -233,11 +233,24 @@ function updateProviderBadge() {
   }
 }
 
+function getCsrf() {
+  const meta = document.querySelector('meta[name="csrf-token"]');
+  return meta ? meta.getAttribute('content') : '';
+}
+
 function testApi(provider) {
   const resultEl = document.getElementById(provider + 'TestResult');
   resultEl.innerHTML = '<span class="text-muted"><i class="fas fa-spinner fa-spin me-1"></i>Testing...</span>';
-  fetch('/julisunkan/test-' + provider, { method: 'POST', headers: { 'X-CSRFToken': getCsrf() } })
-    .then(r => r.json())
+  fetch('/julisunkan/test-' + provider, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': getCsrf(), 'Content-Type': 'application/json' }
+  })
+    .then(r => {
+      if (!r.ok && r.status !== 400 && r.status !== 500) {
+        throw new Error('HTTP ' + r.status);
+      }
+      return r.json();
+    })
     .then(data => {
       if (data.success) {
         resultEl.innerHTML = '<span class="text-success"><i class="fas fa-check-circle me-1"></i>' +
@@ -246,14 +259,9 @@ function testApi(provider) {
         resultEl.innerHTML = '<span class="text-danger"><i class="fas fa-times-circle me-1"></i>' + (data.error || 'Unknown error') + '</span>';
       }
     })
-    .catch(() => {
-      resultEl.innerHTML = '<span class="text-danger"><i class="fas fa-times-circle me-1"></i>Request failed</span>';
+    .catch(err => {
+      resultEl.innerHTML = '<span class="text-danger"><i class="fas fa-times-circle me-1"></i>Request failed: ' + err.message + '</span>';
     });
-}
-
-function getCsrf() {
-  const m = document.cookie.match(/csrf_token=([^;]+)/);
-  return m ? decodeURIComponent(m[1]) : '';
 }
 </script>
 {% endblock %}
