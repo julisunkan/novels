@@ -1,0 +1,6 @@
+Looking in indexes: http://package-firewall.replit.local/pypi/simple/
+Collecting Pillow
+  Using cached http://package-firewall.replit.local/pypi/packages/84/21/a35af28dcc61f37ed850a2d64c65c701321dfbf25085e469d5559360cbbf/pillow-12.3.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (9.1 kB)
+Using cached http://package-firewall.replit.local/pypi/packages/84/21/a35af28dcc61f37ed850a2d64c65c701321dfbf25085e469d5559360cbbf/pillow-12.3.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (6.9 MB)
+Installing collected packages: Pillow
+Successfully installed Pillow-12.3.0
