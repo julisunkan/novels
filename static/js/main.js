@@ -81,11 +81,24 @@ function showToast(message, type = 'info', duration = 4000) {
 }
 
 // ===== INLINE CONFIRM =====
+function _escHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 function showConfirm(message, onConfirm) {
-  const container = document.getElementById('inlineNotifications');
+  if (typeof onConfirm !== 'function') return;
+  let container = document.getElementById('inlineNotifications');
   if (!container) {
-    if (window.confirm(message)) onConfirm();
-    return;
+    // Create a floating container so we never fall back to window.confirm()
+    container = document.createElement('div');
+    container.id = 'inlineNotifications';
+    container.style.cssText = [
+      'position:fixed', 'top:70px', 'left:50%', 'transform:translateX(-50%)',
+      'width:90%', 'max-width:640px', 'z-index:10500', 'pointer-events:auto'
+    ].join(';');
+    document.body.appendChild(container);
   }
 
   // Remove any existing confirm prompt
@@ -98,7 +111,7 @@ function showConfirm(message, onConfirm) {
   el.setAttribute('role', 'alert');
   el.innerHTML = `
     <i class="fas fa-exclamation-triangle flex-shrink-0"></i>
-    <span class="flex-grow-1">${message}</span>
+    <span class="flex-grow-1">${_escHtml(message)}</span>
     <button class="btn btn-sm btn-danger" id="${id}-ok">Yes, continue</button>
     <button class="btn btn-sm btn-outline-secondary" id="${id}-no">Cancel</button>
   `;
